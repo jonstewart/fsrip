@@ -7,3 +7,6 @@
 [submodule "vendors/afflib"]
 	path = vendors/afflib
 	url = git://github.com/jonstewart/afflib.git
+[submodule "vendors/scope"]
+	path = vendors/scope
+	url = git://github.com/jonstewart/scope.git
