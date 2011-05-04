@@ -29,24 +29,23 @@ def buildVendor(pattern, vDir, iDir, buildFn):
 
 def buildTSK(tskDir, installDir):
   print("Building sleuthkit")
-  # --with-afflib=%s
-  shellCall('./configure --prefix=%s --enable-static --enable-shared=no --with-libewf=%s' % (installDir, installDir))
+  shellCall('./configure --prefix=%s --enable-static=no --enable-shared=yes --with-afflib=%s --with-libewf=%s' % (installDir, installDir, installDir))
   shellCall('make install')
 
 def buildBoost(boostDir, installDir):
   print("Building boost")
   shellCall('./bootstrap.sh')
-  shellCall('./bjam --stagedir=%s --with-program_options link=static variant=release '
-            'threading=single stage runtime-link=static' % installDir)
+  shellCall('./bjam --stagedir=%s --with-program_options link=shared variant=release '
+            'threading=single stage runtime-link=shared' % installDir)
 
 def buildAfflib(affDir, installDir):
   print("building afflib")
-  shellCall('./configure --prefix=%s --enable-shared=no' % installDir)
+  shellCall('./configure --prefix=%s --enable-static=no --enable-shared=yes' % installDir)
   shellCall('make install')
 
 def buildLibewf(ewfDir, installDir):
   print("building libewf")
-  shellCall('./configure --prefix=%s --enable-static --enable-shared=no' % installDir)
+  shellCall('./configure --prefix=%s --enable-static=no --enable-shared=yes' % installDir)
   shellCall('make install')
             
 arch = platform.platform()
@@ -65,7 +64,7 @@ tskDir   = 'vendors/sleuthkit'
 deps = 'deps'
 depsLib = p.join(deps, 'lib')
 
-#buildVendor('lib/*aff*', affDir, deps, buildAfflib)
+buildVendor('lib/*aff*', affDir, deps, buildAfflib)
 buildVendor('lib/*ewf*', ewfDir, deps, buildLibewf)
 buildVendor('lib/*tsk*', tskDir, deps, buildTSK)
 buildVendor('lib/*program_options*', boostDir, deps, buildBoost)
@@ -75,4 +74,4 @@ ccflags = '-Wall -Wno-trigraphs -Wextra %s -isystem %s -isystem %s -isystem %s' 
 env.Replace(CCFLAGS=ccflags)
 env.Append(LIBPATH=[p.abspath(depsLib)])
 
-sub('src')
+fsrip = sub('src')
