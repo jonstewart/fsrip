@@ -1,0 +1,12 @@
+*.dblite
+*.o
+deps/*
+*~
+tmp
+lib/*
+bin/*
+DesignTimeResolveAssemblyReferencesInput.cache
+*.exe
+*.pdb
+*.exe.manifest
+*.FileListAbsolute.txt
