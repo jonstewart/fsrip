@@ -367,3 +367,25 @@ weak_ptr< VolumeSystem > Image::volumeSystem() const {
 weak_ptr< Filesystem > Image::filesystem() const {
   return weak_ptr<Filesystem>(Fs);
 }
+
+ssize_t Image::dump(std::ostream& o) const {
+  ssize_t rlen;
+  char buf[4096]; 
+  TSK_OFF_T off = 0;
+
+  while (off < Img->size) {
+    rlen = tsk_img_read(Img, off, buf, sizeof(buf));
+    if (rlen == -1) {
+      return -1;
+    }
+
+    off += rlen;
+
+    o.write(buf, rlen);
+    if (!o.good()) {
+      return -1;
+    }
+  }
+
+  return Img->size;
+}

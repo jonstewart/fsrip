@@ -11,6 +11,7 @@ Copyright (c) 2010 Lightbox Technologies, Inc. All rights reserved.
 #include <boost/function.hpp>
 #include <tsk3/libtsk.h>
 
+#include <iostream>
 #include <string>
 #include <vector>
 
@@ -117,6 +118,8 @@ public:
 
   weak_ptr< VolumeSystem > volumeSystem() const;
   weak_ptr< Filesystem > filesystem() const;
+
+  ssize_t dump(std::ostream& o) const;
 
 private:
   Image(TSK_IMG_INFO* img, const vector< string >& files);

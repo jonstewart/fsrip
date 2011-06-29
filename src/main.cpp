@@ -305,6 +305,10 @@ bool visitFilesystems(const shared_ptr< Image >& img, VisitFn fn) {
   return good;
 }
 
+bool printImageDump(const shared_ptr< Image >& img) {
+  return img->dump(std::cout) != -1;
+}
+
 bool printDeviceInfo(const shared_ptr< Image >& img) {
   std::cout << "{";
 
@@ -356,7 +360,7 @@ int main(int argc, char *argv[]) {
   posOpts.add("ev-files", -1);
   desc.add_options()
     ("help", "produce help message")
-    ("command", po::value< std::string >(), "command to perform [info|dumpfs]")
+    ("command", po::value< std::string >(), "command to perform [imgdump|info|dumpfs|walkfs]")
     ("ev-files", po::value< std::vector< std::string > >(), "evidence files");
 
   po::variables_map vm;
@@ -371,7 +375,10 @@ int main(int argc, char *argv[]) {
       std::string command(vm["command"].as< std::string >());
       shared_ptr< Image > img(Image::open(vm["ev-files"].as< vector< string > >()));
       if (img) {
-        if (command == "info") {
+        if (command == "imgdump") {
+          return printImageDump(img) ? 0 : 1;
+        }
+        else if (command == "info") {
           return printDeviceInfo(img) ? 0: 1;
         }
         else if (command == "dumpfs") {
