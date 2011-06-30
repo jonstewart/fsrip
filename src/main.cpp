@@ -360,7 +360,7 @@ int main(int argc, char *argv[]) {
   posOpts.add("ev-files", -1);
   desc.add_options()
     ("help", "produce help message")
-    ("command", po::value< std::string >(), "command to perform [imgdump|info|dumpfs|walkfs]")
+    ("command", po::value< std::string >(), "command to perform [info|dumpimg|dumpfs|walkfs]")
     ("ev-files", po::value< std::vector< std::string > >(), "evidence files");
 
   po::variables_map vm;
@@ -375,7 +375,7 @@ int main(int argc, char *argv[]) {
       std::string command(vm["command"].as< std::string >());
       shared_ptr< Image > img(Image::open(vm["ev-files"].as< vector< string > >()));
       if (img) {
-        if (command == "imgdump") {
+        if (command == "dumpimg") {
           return printImageDump(img) ? 0 : 1;
         }
         else if (command == "info") {
