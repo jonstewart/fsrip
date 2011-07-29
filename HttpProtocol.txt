@@ -1,0 +1,46 @@
+Base Url: http://host:port/fsrip
+
+
+Evidence files: http://host:port/fsrip/image/id
+
+PUT 
+{"segments":["/path/to/image.e01", "/path/to/image.e01"]}
+
+GET 
+{all the image stuff}
+
+DELETE
+empty response
+
+
+Volumes: http://host:port/fsrip/<image id>/volumes
+GET
+{list of volume info}
+
+
+Directories: http://host:port/fsrip/<image id>/<vol id>/dir/path/to/dir
+GET
+
+Entry metadata: http://host:port/fsrip/<image id>/<vol id>/entry/path/to/file
+								http://host:port/fsrip/<image id>/<vol id>/<inum>
+GET
+
+
+Recursive listing: http://host:port/fsrip/<image id>/<vol id>/walk/path/to/subdir
+ - don't need subdir
+GET
+
+
+File data: http://host:port/fsrip/<image id>/<vol id>/file/path/to/file?slack=true|false&stream=0..n
+GET
+
+
+Raw data: http://host:port/fsrip/<image id>/sectors?start=sector&end=sector
+					http://host:port/fsrip/<image id>/<vol id>/blocks?start=blocknum&end=blocknum
+GET
+
+
+Notes:
+ - should we try to unify this with our ID scheme for HBase so that the REST APIs can coincide?
+ - how does this translate to the binary avro stuff?
+ - should binary avro be accessible through the web API? Probably. Hmm. (Some kind of header flag? or query parameter?)
