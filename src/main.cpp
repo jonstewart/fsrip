@@ -158,18 +158,44 @@ string bytesAsString(const unsigned char* idBeg, const unsigned char* idEnd) {
   return buf.str();
 }
 
-class MetadataWriter: public TskAuto {
+class LbtTskAuto: public TskAuto {
+public:
+  virtual void finishWalk() {}
+};
+
+class FileCounter: public LbtTskAuto {
+public:
+  FileCounter(ostream& out): NumFiles(0), Out(out) {}
+
+  virtual ~FileCounter() {}
+
+  virtual TSK_RETVAL_ENUM processFile(TSK_FS_FILE*, const char*) {
+    ++NumFiles;
+    return TSK_OK;
+  }
+
+  virtual void finishWalk() {
+    Out << NumFiles << endl;
+  }
+
+  unsigned int NumFiles;
+
+protected:
+  ostream& Out;
+};
+
+class MetadataWriter: public FileCounter {
 public:
   MetadataWriter(ostream& out);
+
+  virtual ~MetadataWriter() {}
 
   virtual TSK_FILTER_ENUM filterFs(TSK_FS_INFO *fs_info);
 
   virtual TSK_RETVAL_ENUM processFile(TSK_FS_FILE *fs_file, const char *path);
+  virtual void finishWalk() {}
 
-  unsigned int NumFiles;
-  
 private:
-  ostream& Out;
   string  FsInfo,
           Null,
           CurDir;
@@ -180,7 +206,7 @@ private:
 };
 
 MetadataWriter::MetadataWriter(ostream& out):
-  NumFiles(0), Out(out), Fs(0), CurDirIndex(0) {}
+  FileCounter(out), Fs(0), CurDirIndex(0) {}
 
 TSK_FILTER_ENUM MetadataWriter::filterFs(TSK_FS_INFO *fs) {
   stringstream buf;
@@ -195,7 +221,6 @@ TSK_FILTER_ENUM MetadataWriter::filterFs(TSK_FS_INFO *fs) {
 }
 
 TSK_RETVAL_ENUM MetadataWriter::processFile(TSK_FS_FILE* file, const char* path) {
-  ++NumFiles;
   ++CurDirIndex;
   if (0 != CurDir.compare(path)) {
     CurDirIndex = 0;
@@ -273,59 +298,8 @@ TSK_RETVAL_ENUM MetadataWriter::processFile(TSK_FS_FILE* file, const char* path)
     cerr << "Error on " << NumFiles << ": " << e.what() << endl;
   }
   // cerr << "finishing callback" << endl;
+  FileCounter::processFile(file, path);
   return TSK_OK;
-}
-/*
-TSK_WALK_RET_ENUM FsWalker::countFile(TSK_FS_FILE*, const char*, unsigned int) {
-  ++NumFiles; 
-  return TSK_WALK_CONT;  
-}
-
-bool dumpFs(const shared_ptr<Filesystem>& fs) {
-  MetadataWriter dumper(cout, fs);
-  bool ret = fs->walk(bind(&FsWalker::printFile, ref(dumper), _1, _2, _3));
-  if (!ret) {
-    cerr << "Encountered an error while walking the filesystem" << endl;
-  }
-  return ret;
-}
-
-bool walkFs(const shared_ptr<Filesystem>& fs) {
-  FsWalker walker(cout, fs);
-  bool ret = fs->walk(bind(&FsWalker::countFile, ref(walker), _1, _2, _3));
-  if (!ret) {
-    cerr << "Encountered an error while walking the filesystem" << endl;
-  }
-  cout << "Walked " << walker.NumFiles << " directory entries" << std::endl;
-  return ret;
-}*/
-
-template<typename VisitFn>
-bool visitFilesystems(const shared_ptr< Image >& img, VisitFn fn) {
-  bool good = true;
-  if (shared_ptr<VolumeSystem> vs = img->volumeSystem().lock()) {
-    if (vs->numVolumes()) {
-      for (VolumeSystem::VolIter it(vs->volBegin()); it != vs->volEnd(); ++it) {
-        if (shared_ptr<Volume> vol = it->lock()) {
-          if (shared_ptr<Filesystem> fs = vol->filesystem().lock()) {
-            if (!fn(fs)) {
-              good = false;
-            }
-          }
-        }
-      }
-    }
-    else {
-      good = false;
-    }
-  }
-  else if (shared_ptr<Filesystem> fs = img->filesystem().lock()) {
-    good = fn(fs);
-  }
-  else {
-    good = false;
-  }
-  return good;
 }
 
 bool printDeviceInfo(const shared_ptr< Image >& img) {
@@ -372,18 +346,18 @@ void printHelp(const po::options_description& desc) {
   std::cout << desc << std::endl;
 }
 
-shared_ptr<TskAuto> createVisitor(const string& cmd, ostream& out) {
+shared_ptr<LbtTskAuto> createVisitor(const string& cmd, ostream& out) {
 /*  if (cmd == "info") {
     return shared_ptr<TskAuto>(new ImgInfo(out));
   }
   else*/ if (cmd == "dumpfs") {
-    return shared_ptr<TskAuto>(new MetadataWriter(out));
-  }/*
-  else if (cmd == "walkfs") {
-    return shared_ptr<TskAuto>(new ImgInfo(out));
-  }*/
+    return shared_ptr<LbtTskAuto>(new MetadataWriter(out));
+  }
+  else if (cmd == "count") {
+    return shared_ptr<LbtTskAuto>(new FileCounter(out));
+  }
   else {
-    return shared_ptr<TskAuto>();
+    return shared_ptr<LbtTskAuto>();
   }
 }
 
@@ -394,7 +368,7 @@ int main(int argc, char *argv[]) {
   posOpts.add("ev-files", -1);
   desc.add_options()
     ("help", "produce help message")
-    ("command", po::value< std::string >(), "command to perform [info|dumpfs]")
+    ("command", po::value< std::string >(), "command to perform [info|dumpfs|count]")
     ("ev-files", po::value< std::vector< std::string > >(), "evidence files");
 
   po::variables_map vm;
@@ -402,20 +376,25 @@ int main(int argc, char *argv[]) {
     po::store(po::command_line_parser(argc, argv).options(desc).positional(posOpts).run(), vm);
     po::notify(vm);
 
+    shared_ptr<LbtTskAuto> walker;
+
     if (vm.count("help")) {
       printHelp(desc);
     }
-    else if (vm.count("command") && vm.count("ev-files")) {
-      std::string                 command(vm["command"].as< std::string >());
+    else if (vm.count("command") && vm.count("ev-files") && (walker = createVisitor(vm["command"].as<string>(), cout))) {
       std::vector< string >       imgSegs(vm["ev-files"].as< vector< string > >());
       scoped_array< TSK_TCHAR* >  segments(new TSK_TCHAR*[imgSegs.size()]);
       for (unsigned int i = 0; i < imgSegs.size(); ++i) {
         segments[i] = (TSK_TCHAR*)imgSegs[i].c_str();
       }
-
-      shared_ptr<TskAuto> walker(createVisitor(command, cout));
       if (0 == walker->openImage(imgSegs.size(), segments.get(), TSK_IMG_TYPE_DETECT, 0)) {
-        return walker->findFilesInImg();
+        if (0 == walker->findFilesInImg()) {
+          walker->finishWalk();
+          return 0;
+        }
+        else {
+          cerr << "Had an error parsing filesystem" << endl;
+        }
       }
       else {
         cerr << "Had an error opening the evidence file" << endl;
