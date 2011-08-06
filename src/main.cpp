@@ -1,8 +1,8 @@
 /*
-src/deacon/main.cpp
+src/main.cpp
 
 Created by Jon Stewart on 2010-01-04.
-Copyright (c) 2010 Lightbox Technologies, Inc. All rights reserved.
+Copyright (c) 2010 Lightbox Technologies, Inc.
 */
 
 #include <boost/program_options.hpp>
@@ -340,7 +340,7 @@ bool printDeviceInfo(const shared_ptr< Image >& img) {
 }
 
 void printHelp(const po::options_description& desc) {
-  std::cout << "deacon, Copyright (c) 2010, Lightbox Technologies, Inc." << std::endl;
+  std::cout << "fsrip, Copyright (c) 2010-2011, Lightbox Technologies, Inc." << std::endl;
   std::cout << "TSK version is " << tsk_version_get_str() << std::endl;
   std::cout << "Boost program options version is " << BOOST_PROGRAM_OPTIONS_VERSION << std::endl;
   std::cout << desc << std::endl;
