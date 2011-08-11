@@ -160,7 +160,42 @@ string bytesAsString(const unsigned char* idBeg, const unsigned char* idEnd) {
 
 class LbtTskAuto: public TskAuto {
 public:
+  virtual ~LbtTskAuto() {}
+
+  virtual uint8_t start() {
+    return findFilesInImg();
+  }
+
+  virtual TSK_RETVAL_ENUM processFile(TSK_FS_FILE*, const char*) { return TSK_OK; }
+
   virtual void finishWalk() {}
+};
+
+class ImageDumper: public LbtTskAuto {
+public:
+  ImageDumper(ostream& out): Out(out) {}
+
+  virtual uint8_t start() {
+    ssize_t rlen;
+    char buf[4096];
+    TSK_OFF_T off = 0;
+
+    while (off < m_img_info->size) {
+      rlen = tsk_img_read(m_img_info, off, buf, sizeof(buf));
+      if (rlen == -1) {
+        return -1;
+      }
+      off += rlen;
+      Out.write(buf, rlen);
+      if (!Out.good()) {
+        return -1;
+      }
+    }
+    return 0;
+  }
+
+private:
+  ostream& Out;
 };
 
 class FileCounter: public LbtTskAuto {
@@ -302,6 +337,10 @@ TSK_RETVAL_ENUM MetadataWriter::processFile(TSK_FS_FILE* file, const char* path)
   return TSK_OK;
 }
 
+bool printImageDump(const shared_ptr< Image >& img) {
+  return img->dump(std::cout) != -1;
+}
+
 bool printDeviceInfo(const shared_ptr< Image >& img) {
   std::cout << "{";
 
@@ -349,8 +388,11 @@ void printHelp(const po::options_description& desc) {
 shared_ptr<LbtTskAuto> createVisitor(const string& cmd, ostream& out) {
 /*  if (cmd == "info") {
     return shared_ptr<TskAuto>(new ImgInfo(out));
+  }*/
+  if (cmd == "dumpimg") {
+    return shared_ptr<LbtTskAuto>(new ImageDumper(out));
   }
-  else*/ if (cmd == "dumpfs") {
+  else if (cmd == "dumpfs") {
     return shared_ptr<LbtTskAuto>(new MetadataWriter(out));
   }
   else if (cmd == "count") {
@@ -368,7 +410,7 @@ int main(int argc, char *argv[]) {
   posOpts.add("ev-files", -1);
   desc.add_options()
     ("help", "produce help message")
-    ("command", po::value< std::string >(), "command to perform [info|dumpfs|count]")
+    ("command", po::value< std::string >(), "command to perform [info|dumpimg|dumpfs|count]")
     ("ev-files", po::value< std::vector< std::string > >(), "evidence files");
 
   po::variables_map vm;
@@ -388,7 +430,7 @@ int main(int argc, char *argv[]) {
         segments[i] = (TSK_TCHAR*)imgSegs[i].c_str();
       }
       if (0 == walker->openImage(imgSegs.size(), segments.get(), TSK_IMG_TYPE_DETECT, 0)) {
-        if (0 == walker->findFilesInImg()) {
+        if (0 == walker->start()) {
           walker->finishWalk();
           return 0;
         }
