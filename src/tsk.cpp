@@ -319,8 +319,8 @@ weak_ptr< Volume > VolumeSystem::getVol(unsigned int i) const {
 }
 //***********************************************************************
 
-Image::Image(TSK_IMG_INFO* img, const vector< string >& files):
-  Img(img), Files(files)
+Image::Image(TSK_IMG_INFO* img, const vector< string >& files, bool close):
+  Img(img), Files(files), ShouldClose(close)
 {
   TSK_VS_INFO* vs = tsk_vs_open(img, 0, TSK_VS_TYPE_DETECT);
   if (vs) {
@@ -333,7 +333,9 @@ Image::Image(TSK_IMG_INFO* img, const vector< string >& files):
 }
 
 Image::~Image() {
-  tsk_img_close(Img);
+  if (ShouldClose) {
+    tsk_img_close(Img);
+  }
 }
 
 shared_ptr< Image > Image::open(const vector< string >& files) {
@@ -345,11 +347,15 @@ shared_ptr< Image > Image::open(const vector< string >& files) {
   }
   TSK_IMG_INFO* evInfo = tsk_img_open(files.size(), evArray, TSK_IMG_TYPE_DETECT, 0);
   if (evInfo) {
-    ret.reset(new Image(evInfo, files));
+    ret.reset(new Image(evInfo, files, true));
   }
   delete [] evArray;
   
   return ret;
+}
+
+shared_ptr< Image > Image::wrap(TSK_IMG_INFO* img, const vector<string>& files, bool close) {
+  return shared_ptr<Image>(new Image(img, files, close));
 }
 
 uint64  Image::size() const {
@@ -366,4 +372,26 @@ weak_ptr< VolumeSystem > Image::volumeSystem() const {
 
 weak_ptr< Filesystem > Image::filesystem() const {
   return weak_ptr<Filesystem>(Fs);
+}
+
+ssize_t Image::dump(std::ostream& o) const {
+  ssize_t rlen;
+  char buf[4096]; 
+  TSK_OFF_T off = 0;
+
+  while (off < Img->size) {
+    rlen = tsk_img_read(Img, off, buf, sizeof(buf));
+    if (rlen == -1) {
+      return -1;
+    }
+
+    off += rlen;
+
+    o.write(buf, rlen);
+    if (!o.good()) {
+      return -1;
+    }
+  }
+
+  return Img->size;
 }

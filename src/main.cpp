@@ -198,6 +198,54 @@ private:
   ostream& Out;
 };
 
+class ImageInfo: public LbtTskAuto {
+public:
+  ImageInfo(ostream& out, const vector<string>& files): Out(out), Files(files) {}
+
+  virtual uint8_t start() {
+    shared_ptr<Image> img = Image::wrap(m_img_info, Files, false);
+
+    Out << "{";
+
+    Out << j(string("files")) << ":[";
+    writeSequence(cout, img->files().begin(), img->files().end(), ", ");
+    Out << "]"
+        << j("description", img->desc())
+        << j("size", img->size());
+
+    if (shared_ptr<VolumeSystem> vs = img->volumeSystem().lock()) {
+      Out << "," << j("volumeSystem") << ":{"
+          << j("type", vs->type(), true)
+          << j("description", vs->desc())
+          << j("blockSize", vs->blockSize())
+          << j("numVolumes", vs->numVolumes())
+          << j("offset", vs->offset());
+
+      if (vs->numVolumes()) {
+        Out << "," << j(string("volumes")) << ":[";
+        writeSequence(Out, vs->volBegin(), vs->volEnd(), ",");
+        Out << "]";
+      }
+      else {
+        cerr << "Image has volume system, but no volumes" << endl;
+      }
+      Out << "}";
+    }
+    else if (shared_ptr<Filesystem> fs = img->filesystem().lock()) {
+      outputFS(Out, fs);
+    }
+    else {
+      cerr << "Image had neither a volume system nor a filesystem" << endl;
+    }
+    Out << "}" << std::endl;
+    return 0;
+  }
+
+private:
+  ostream& Out;
+  vector<string> Files;
+};
+
 class FileCounter: public LbtTskAuto {
 public:
   FileCounter(ostream& out): NumFiles(0), Out(out) {}
@@ -337,47 +385,6 @@ TSK_RETVAL_ENUM MetadataWriter::processFile(TSK_FS_FILE* file, const char* path)
   return TSK_OK;
 }
 
-bool printImageDump(const shared_ptr< Image >& img) {
-  return img->dump(std::cout) != -1;
-}
-
-bool printDeviceInfo(const shared_ptr< Image >& img) {
-  std::cout << "{";
-
-  std::cout << j(string("files")) << ":[";
-  writeSequence(cout, img->files().begin(), img->files().end(), ", ");
-  std::cout << "]"
-            << j("description", img->desc())
-            << j("size", img->size());
-
-  if (shared_ptr<VolumeSystem> vs = img->volumeSystem().lock()) {
-    std::cout << "," << j("volumeSystem") << ":{"
-              << j("type", vs->type(), true)
-              << j("description", vs->desc())
-              << j("blockSize", vs->blockSize())
-              << j("numVolumes", vs->numVolumes())
-              << j("offset", vs->offset());
-
-    if (vs->numVolumes()) {
-      std::cout << "," << j(string("volumes")) << ":[";
-      writeSequence(std::cout, vs->volBegin(), vs->volEnd(), ",");
-      std::cout << "]";
-    }
-    else {
-      cerr << "Image has volume system, but no volumes" << endl;
-    }
-    std::cout << "}";
-  }
-  else if (shared_ptr<Filesystem> fs = img->filesystem().lock()) {
-    outputFS(std::cout, fs);
-  }
-  else {
-    cerr << "Image had neither a volume system nor a filesystem" << endl;
-  }
-  std::cout << "}" << std::endl;
-  return true;
-}
-
 void printHelp(const po::options_description& desc) {
   std::cout << "fsrip, Copyright (c) 2010-2011, Lightbox Technologies, Inc." << std::endl;
   std::cout << "TSK version is " << tsk_version_get_str() << std::endl;
@@ -385,7 +392,7 @@ void printHelp(const po::options_description& desc) {
   std::cout << desc << std::endl;
 }
 
-shared_ptr<LbtTskAuto> createVisitor(const string& cmd, ostream& out) {
+shared_ptr<LbtTskAuto> createVisitor(const string& cmd, ostream& out, const vector<string>& segments) {
 /*  if (cmd == "info") {
     return shared_ptr<TskAuto>(new ImgInfo(out));
   }*/
@@ -397,6 +404,9 @@ shared_ptr<LbtTskAuto> createVisitor(const string& cmd, ostream& out) {
   }
   else if (cmd == "count") {
     return shared_ptr<LbtTskAuto>(new FileCounter(out));
+  }
+  else if (cmd == "info") {
+    return shared_ptr<LbtTskAuto>(new ImageInfo(out, segments));
   }
   else {
     return shared_ptr<LbtTskAuto>();
@@ -420,11 +430,14 @@ int main(int argc, char *argv[]) {
 
     shared_ptr<LbtTskAuto> walker;
 
+    std::vector< string > imgSegs;
+    if (vm.count("ev-files")) {
+      imgSegs = vm["ev-files"].as< vector< string > >();
+    }
     if (vm.count("help")) {
       printHelp(desc);
     }
-    else if (vm.count("command") && vm.count("ev-files") && (walker = createVisitor(vm["command"].as<string>(), cout))) {
-      std::vector< string >       imgSegs(vm["ev-files"].as< vector< string > >());
+    else if (vm.count("command") && vm.count("ev-files") && (walker = createVisitor(vm["command"].as<string>(), cout, imgSegs))) {
       scoped_array< TSK_TCHAR* >  segments(new TSK_TCHAR*[imgSegs.size()]);
       for (unsigned int i = 0; i < imgSegs.size(); ++i) {
         segments[i] = (TSK_TCHAR*)imgSegs[i].c_str();

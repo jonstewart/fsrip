@@ -11,6 +11,7 @@ Copyright (c) 2010 Lightbox Technologies, Inc. All rights reserved.
 #include <boost/function.hpp>
 #include <tsk3/libtsk.h>
 
+#include <iostream>
 #include <string>
 #include <vector>
 
@@ -107,6 +108,7 @@ private:
 class Image {
 public:
   static shared_ptr< Image > open(const vector< string >& files);
+  static shared_ptr< Image > wrap(TSK_IMG_INFO* img, const vector<string>& files, bool close);
 
   ~Image();
 
@@ -118,11 +120,14 @@ public:
   weak_ptr< VolumeSystem > volumeSystem() const;
   weak_ptr< Filesystem > filesystem() const;
 
+  ssize_t dump(std::ostream& o) const;
+
 private:
-  Image(TSK_IMG_INFO* img, const vector< string >& files);
+  Image(TSK_IMG_INFO* img, const vector< string >& files, bool close);
 
   TSK_IMG_INFO* Img;
   vector< string > Files;
   shared_ptr< VolumeSystem > VS;
   shared_ptr< Filesystem > Fs;
+  bool ShouldClose;
 };
