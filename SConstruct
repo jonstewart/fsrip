@@ -29,6 +29,7 @@ def buildVendor(pattern, vDir, iDir, buildFn):
 
 def buildTSK(tskDir, installDir):
   print("Building sleuthkit")
+  shellCall('./bootstrap')
   shellCall('./configure --prefix=%s --enable-static=no --enable-shared=yes --with-afflib=%s --with-libewf=%s' % (installDir, installDir, installDir))
   shellCall('make install')
 
