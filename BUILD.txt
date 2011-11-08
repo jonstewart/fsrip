@@ -1,0 +1,92 @@
+fsrip Build Steps
+
+Platforms
+---------
+fsrip can build on Linux, MacOS X, and Windows. It should be noted that 
+Windows builds are a huge pain in the ass; stock up on beer and nachos.
+
+
+Tooling
+-------
+fsrip depends on gcc (MinGW on Windows) and the SCons build tool
+(v2), which in turn requires Python. Some relevant links are:
+
+SCons: http://www.scons.org/
+
+<need to put mingw download links here, especially for 64 bit>
+
+
+Libraries
+---------
+BOOST
+fsrip uses the Boost collection of C++ libraries. In
+addition to many of the header-only libraries, fsrip relies on the
+program_options libraries having been built and available by default to gcc.
+
+  http://www.boost.org
+ 
+Boost on Windows
+
+To build Boost on Windows, try the following (assuming that you've unzipped
+boost to C:\boost):
+
+C:\> cd boost
+C:\boost\> .\bootstrap.bat   # builds boost's jam build tool
+
+C:\boost\> .\bjam --stagedir=C:\lib --with-program_options link=static 
+                  runtime-link=static variant=release threading=multi 
+                  toolset=gcc address-model=[32|64]
+                  stage
+
+You may also want to use the '--layout=system' option, or you can make copies 
+of the libraries that remove version and build information from their 
+filenames. This will build the requisite libraries and place them in C:\lib 
+(or wherever you choose to put the libs), but will avoid copying all the 
+header files into a new place (as the bjam 'install' command does). Use 
+shared or static link modes as appropriate.
+
+Otherwise, check out the boostType option below. If you get a message that the
+Boost program_options library can't be found and you're _certain_ it's there 
+and findable, you probably need to use boostType.
+
+THE SLEUTHKIT
+fsrip uses The Sleuthkit's libtsk3 to do the heavy lifting, so you will need 
+to download and build The Sleuthkit:
+
+  http://www.sleuthkit.org
+
+Of note is that The Sleuthkit can optionally make use of afflib and libewf to
+read AFF and EWF/E01 evidence files, respectively. We recommend you download
+both libraries and install them first. If they are found on the system, scons
+will link against them. It should also be noted that afflib has a number of
+dependencies, so please read through its build procedures carefully.
+
+  http://www.afflib.org
+
+  http://libewf.sourceforge.net
+
+ENVIRONMENT VARIABLES
+If you do not want to have these dependencies installed in standard system 
+locations, you may want to avail yourself of the following environment 
+variables:
+
+  CPATH           # gcc: list of dirs to be searched for header files
+  LIBRARY_PATH    # gcc: list of dirs to be searched for libraries
+  LD_LIBRARY_PATH # ld:  list of dirs containing so libs for run-time
+
+For example, if you used "./configure --prefix=$HOME" when building the 
+dependencies, you could set the variables in .bashrc as follows:
+
+  export CPATH=~/include
+  export LIBRARY_PATH=~/lib
+  export LD_LIBRARY_PATH=~/lib
+
+Scons Options
+-------------
+On a Unix-based OS, we recommend using the '-j n', to specify the use of 'n' 
+parallel build tasks. This probably won't work so well on Windows, as, y'know, 
+Windows sucks.
+
+  'boostType="foo"' will append foo onto the end of any Boost libraries, to 
+                    help with finding your desired variant (e.g., "-mt", 
+                    "-mgw44-mt-s-1_46_1")
