@@ -1,5 +1,5 @@
-import glob
-
-Import('env')
-ret = env.Program('fsrip', Glob('*.cpp'), LIBS=['tsk3', 'boost_program_options', 'ewf'])
+Import('env', 'boostType', 'optLibs')
+libs = ['tsk3', 'boost_program_options']
+libs.extend(optLibs)
+ret = env.Program('fsrip', Glob('*.cpp'), LIBS=libs)
 Return('ret')
