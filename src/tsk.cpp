@@ -7,31 +7,14 @@ Copyright (c) 2010 Lightbox Technologies, Inc. All rights reserved.
 
 #include "tsk.h"
 
-#include <tsk3/fs/tsk_fs_i.h>
+//#include <tsk3/fs/tsk_fs_i.h>
 
 #include <sstream>
 
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <unistd.h>
 #include <cstdlib>
 
 #include <iostream>
 #include <algorithm>
-
-namespace {
-class CallbackHelper {
-public:
-  CallbackHelper(Filesystem::DirWalkFn fn): Fn(fn) {}
-
-  Filesystem::DirWalkFn Fn;
-};
-
-static TSK_WALK_RET_ENUM dirWalkCbHelper(TSK_FS_FILE *file, const char* path, unsigned int dirEntry, void* ptr) {
-  return reinterpret_cast<CallbackHelper*>(ptr)->Fn(file, path, dirEntry);
-}
-}
-//***********************************************************************
 
 Filesystem::Filesystem(TSK_FS_INFO* fs): Fs(fs) {}
 
@@ -127,114 +110,6 @@ uint64 Filesystem::byteOffset() const {
 
 uint64 Filesystem::rootInum() const {
   return Fs->root_inum;
-}
-
-bool notPresent(vector< uint64 >& stack, uint64 value) {
-  return stack.rend() == find(stack.rbegin(), stack.rend(), value);
-}
-
-static const string DOT(".");
-
-int fsRecurse(TSK_FS_INFO* fs, uint64 inum, Filesystem::DirWalkFn callback, string path, vector< uint64 >& stack, TSK_FS_FILE* file, bool lookForOrphans) {
-  // cerr << "opening directory " << inum << endl;
-  shared_ptr<TSK_FS_DIR> dir(tsk_fs_dir_open_meta(fs, inum), tsk_fs_dir_close);
-  if (dir) {
-    file = tsk_fs_file_alloc(fs);
-    stack.push_back(inum);
-    // cerr << "got directory for inum " << inum << ", file is " << (dir->fs_file ? "non-null": "null") << endl;
-    if (dir->names && dir->names_used) {
-      // cerr << "directory " << inum << " has " << dir->names_used << " children, " << dir->names_alloc << " slots allocated" << endl;
-      for (unsigned int i = 0; i < dir->names_used; ++i) {
-        TSK_FS_NAME* name = &dir->names[i];
-        if (name) {
-          // cerr << "child " << i << ", " << name->name << ", opening address " << name->meta_addr << (name->meta_seq ? " and nonzero meta_seq": "") << endl;
-          file->name = 0;
-          file->meta = 0;
-          if ((name->meta_addr
-                  || (name->flags & TSK_FS_NAME_FLAG_ALLOC)) && tsk_fs_file_open_meta(fs, file, name->meta_addr)) {
-            // if (file->name) {
-            //   cerr << "file->name was nonnull!!!" << endl;
-            // }
-          }
-          else {
-            // cerr << "no metadata struct" << endl;
-            file->meta = 0;
-          }
-          file->name = name;
-          TSK_WALK_RET_ENUM retCode = callback(file, path.c_str(), i);
-          
-          if (lookForOrphans && file->meta && (file->meta->flags & TSK_FS_META_FLAG_UNALLOC)) {
-            if (tsk_list_add(&fs->list_inum_named, file->meta->addr)) {
-              // cerr << "had an error adding to the orphan inum list" << endl;
-              tsk_list_free(fs->list_inum_named);
-              fs->list_inum_named = 0;
-              lookForOrphans = false;
-            }
-          }
-          
-          if (TSK_WALK_CONT != retCode) {
-            // cerr << "Callback said stop for inum " << name->meta_addr << endl;
-            return 1;
-          }
-          if ((TSK_FS_NAME_TYPE_DIR == name->type || TSK_FS_NAME_TYPE_UNDEF == name->type)
-            && file->meta
-            && file->meta->type == TSK_FS_META_TYPE_DIR
-            && ((file->name->flags & TSK_FS_NAME_FLAG_ALLOC) || ((file->name->flags & TSK_FS_NAME_FLAG_UNALLOC) && (file->meta->flags & TSK_FS_META_FLAG_UNALLOC)))
-            // && file->name->meta_addr != TSK_FS_ORPHANDIR_INUM(fs)
-            && notPresent(stack, name->meta_addr)) {
-            if (0 != fsRecurse(fs, name->meta_addr, callback, path + name->name + "/", stack, file, file->name->meta_addr == TSK_FS_ORPHANDIR_INUM(fs) ? false: lookForOrphans)) {
-              return 1;
-            }
-          }
-          file->name = 0; // set to null so that tsk_fs_file_close doesn't try to destroy the name structure
-          if (file->meta) {
-            tsk_fs_meta_close(file->meta);
-            file->meta = 0;
-          }
-        }
-      }
-    }
-    else {
-      // cerr << "directory had no children" << endl;
-    }
-    tsk_fs_file_close(file);
-    return 0;
-  }
-  else {
-    // cerr << "Could not open up directory for inum " << inum << endl;
-    return 0;    
-  }
-}
-
-bool Filesystem::walk(DirWalkFn callback) const {
-//  CallbackHelper trampoline(callback);
-  vector< uint64 > stack;
-  tsk_list_free(Fs->list_inum_named);
-  Fs->list_inum_named = 0;
-  shared_ptr<TSK_FS_FILE> file(tsk_fs_file_alloc(Fs), tsk_fs_file_close);
-  if (0 == fsRecurse(Fs, Fs->root_inum, callback, string(""), stack, 0/*file.get()*/, true)) {
-    return true;
-  }
-  else
-    return false;
-/*  pid_t childPid = fork();
-  if (childPid == 0) {
-    if (0 == fsRecurse(Fs, Fs->root_inum, callback, string(""))
-      tsk_fs_dir_walk(Fs, Fs->root_inum,
-      (TSK_FS_DIR_WALK_FLAG_ENUM)(TSK_FS_DIR_WALK_FLAG_ALLOC | TSK_FS_DIR_WALK_FLAG_UNALLOC | TSK_FS_DIR_WALK_FLAG_RECURSE),
-      dirWalkCbHelper, &trampoline))
-    {
-      exit(0);
-    }
-    else {
-      exit(1);
-    }
-  }
-  else {
-    int exitCode;
-    wait(&exitCode);
-    return 0 == exitCode;
-  }*/
 }
 //***********************************************************************
 

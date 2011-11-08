@@ -25,8 +25,6 @@ class Filesystem {
   friend class Volume;
   friend class Image;
 public:
-  typedef function< TSK_WALK_RET_ENUM (TSK_FS_FILE*, const char*, unsigned int) > DirWalkFn;
-
   ~Filesystem();
 
   uint64 numBlocks() const;
@@ -49,8 +47,6 @@ public:
   uint64 lastInum() const;
   uint64 byteOffset() const;
   uint64 rootInum() const;
-
-  bool walk(DirWalkFn callback) const;
 
 private:
   Filesystem(TSK_FS_INFO* fs);

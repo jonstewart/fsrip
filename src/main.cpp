@@ -5,16 +5,21 @@ Created by Jon Stewart on 2010-01-04.
 Copyright (c) 2010 Lightbox Technologies, Inc.
 */
 
-#include <boost/program_options.hpp>
-#include <boost/bind.hpp>
-
 #include <iostream>
 #include <iomanip>
 #include <algorithm>
+#include <string>
+#include <iostream>
+
+#include <boost/program_options.hpp>
+#include <boost/bind.hpp>
+#include <boost/shared_ptr.hpp>
 
 #include "tsk.h"
 
 namespace po = boost::program_options;
+
+using namespace std;
 
 template<class T>
 const T& j(const T& x) {
