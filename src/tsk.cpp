@@ -80,10 +80,6 @@ string Filesystem::fsName() const {
   return string(tsk_fs_type_toname(Fs->ftype));
 }
 
-bool Filesystem::isOrphanHunting() const {
-  return Fs->isOrphanHunting == 1;
-}
-
 uint64 Filesystem::journalInum() const {
   return Fs->journ_inum;
 }

@@ -39,7 +39,6 @@ public:
   string fsIDAsString() const;
   uint64 fsType() const;
   string fsName() const;
-  bool isOrphanHunting() const;
   uint64 journalInum() const;
   uint64 numInums() const;
   uint64 lastBlock() const;

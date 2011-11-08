@@ -73,7 +73,6 @@ void outputFS(ostream& buf, shared_ptr<Filesystem> fs) {
       << j("fsID", fs->fsIDAsString())
       << j("type", fs->fsType())
       << j("typeName", fs->fsName())
-      << j("isOrphanHunting", fs->isOrphanHunting())
       << j("journalInum", fs->journalInum())
       << j("numInums", fs->numInums())
       << j("lastBlock", fs->lastBlock())
