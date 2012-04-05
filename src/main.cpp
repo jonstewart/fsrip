@@ -390,9 +390,9 @@ TSK_RETVAL_ENUM MetadataWriter::processFile(TSK_FS_FILE* file, const char* path)
 }
 
 void printHelp(const po::options_description& desc) {
-  std::cout << "fsrip, Copyright (c) 2010-2011, Lightbox Technologies, Inc." << std::endl;
+  std::cout << "fsrip, Copyright (c) 2010-2012, Lightbox Technologies, Inc." << std::endl;
+  std::cout << "Built " << __DATE__ << std::endl;
   std::cout << "TSK version is " << tsk_version_get_str() << std::endl;
-  std::cout << "Boost program options version is " << BOOST_PROGRAM_OPTIONS_VERSION << std::endl;
   std::cout << desc << std::endl;
 }
 
@@ -461,7 +461,8 @@ int main(int argc, char *argv[]) {
       }
     }
     else {
-      std::cerr << "did not understand arguments" << std::endl;
+      std::cerr << "Error: did not understand arguments\n\n";
+      printHelp(desc);
       return 1;
     }
   }
