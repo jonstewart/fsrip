@@ -29,9 +29,6 @@ void printHelp(const po::options_description& desc) {
 }
 
 shared_ptr<LbtTskAuto> createVisitor(const string& cmd, ostream& out, const vector<string>& segments) {
-/*  if (cmd == "info") {
-    return shared_ptr<TskAuto>(new ImgInfo(out));
-  }*/
   if (cmd == "dumpimg") {
     return shared_ptr<LbtTskAuto>(new ImageDumper(out));
   }
