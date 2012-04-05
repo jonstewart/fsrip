@@ -109,6 +109,25 @@ void writeAttr(ostream& out, const TSK_FS_ATTR* a) {
   out << "}";
 }
 
+uint8_t ImageDumper::start() {
+  ssize_t rlen;
+  char buf[4096];
+  TSK_OFF_T off = 0;
+
+  while (off < m_img_info->size) {
+    rlen = tsk_img_read(m_img_info, off, buf, sizeof(buf));
+    if (rlen == -1) {
+      return -1;
+    }
+    off += rlen;
+    Out.write(buf, rlen);
+    if (!Out.good()) {
+      return -1;
+    }
+  }
+  return 0;
+}
+
 uint8_t ImageInfo::start() {
   shared_ptr<Image> img = Image::wrap(m_img_info, Files, false);
 

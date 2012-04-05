@@ -19,24 +19,7 @@ class ImageDumper: public LbtTskAuto {
 public:
   ImageDumper(ostream& out): Out(out) {}
 
-  virtual uint8_t start() {
-    ssize_t rlen;
-    char buf[4096];
-    TSK_OFF_T off = 0;
-
-    while (off < m_img_info->size) {
-      rlen = tsk_img_read(m_img_info, off, buf, sizeof(buf));
-      if (rlen == -1) {
-        return -1;
-      }
-      off += rlen;
-      Out.write(buf, rlen);
-      if (!Out.good()) {
-        return -1;
-      }
-    }
-    return 0;
-  }
+  virtual uint8_t start();
 
 private:
   ostream& Out;
