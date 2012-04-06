@@ -1,0 +1,54 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>Fsrip by jonstewart</title>
+    
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+    <div class="wrapper">
+      <header>
+        <h1>Fsrip</h1>
+        <p>Output Metadata as JSON using The Sleuthkit</p>
+        <p class="view"><a href="https://github.com/jonstewart/fsrip">View the Project on GitHub <small>jonstewart/fsrip</small></a></p>
+        <ul>
+          <li><a href="https://github.com/jonstewart/fsrip/zipball/master">Download <strong>ZIP File</strong></a></li>
+          <li><a href="https://github.com/jonstewart/fsrip/tarball/master">Download <strong>TAR Ball</strong></a></li>
+          <li><a href="https://github.com/jonstewart/fsrip">Fork On <strong>GitHub</strong></a></li>
+        </ul>
+      </header>
+      <section>
+        <h1>fsrip</h1>
+
+<p>fsrip is a simple utility for extracting filesystem information from digital media and evidence files. fsrip has two goals:</p>
+
+<ol>
+<li>Be the tool I want to use for interacting with media/evidence files.</li>
+<li>Lower the barrier to entry for investigators who want to write their own scripts.</li>
+</ol><h3>It's Just Data</h3>
+
+<p>fsrip takes an "it's just data" approach to evidence. There's no API, there are no language bindings, there is only data, which you must then parse. This sounds onerous, but we live in the future, we have JSON. In most scripting languages, it's usually a line or two of code to read a line from stdin as a string, and another line or two to transform json into a dictionary or map or object or whatever your favorite scripting language uses for hierarchical key-value data.</p>
+
+<p>So, that's what fsrip does: it outputs a json string, one per line, for the data you tell it to retrieve. You can then pipe this into your scripts, parse it easily, and do your forensic stuff without having to learn C or C++ or how to C/C++ linkers work.</p>
+
+<p>Also, fsrip tends to be waaaay faster than repeated calls to individual sleuthkit commands. This is because launching processes and reparsing filesystem structures is expensive. fsrip operates in batch on the input, so, well, economies of scale and whatnot.</p>
+
+<h3>Questions, Comments, Smart Remarks?</h3>
+
+<p>Please send email to jon@lightboxtechnologies.com. fsrip is definitely a work-in-progress and generally only does what I need it to do, but I'd love to hear about what you need it to do, too.</p>
+      </section>
+      <footer>
+        <p>This project is maintained by <a href="https://github.com/jonstewart">jonstewart</a></p>
+        <p><small>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></small></p>
+      </footer>
+    </div>
+    <script src="javascripts/scale.fix.js"></script>
+  </body>
+</html>
