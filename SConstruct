@@ -37,7 +37,7 @@ if (not (conf.CheckCXXHeader('boost/shared_ptr.hpp')
 
 optLibs = checkLibs(conf, ['afflib', 'libewf'])
 
-ccflags = '-Wall -Wno-trigraphs -Wextra -O3'
+ccflags = '-Wall -Wno-trigraphs -Wextra -O3 -std=c++0x -Wnon-virtual-dtor'
 env.Replace(CCFLAGS=ccflags)
 
 fsrip = sub('src')

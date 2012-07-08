@@ -41,6 +41,9 @@ shared_ptr<LbtTskAuto> createVisitor(const string& cmd, ostream& out, const vect
   else if (cmd == "info") {
     return shared_ptr<LbtTskAuto>(new ImageInfo(out, segments));
   }
+  else if (cmd == "dumpfiles") {
+    return shared_ptr<LbtTskAuto>(new FileWriter(out));
+  }
   else {
     return shared_ptr<LbtTskAuto>();
   }
@@ -71,7 +74,7 @@ int main(int argc, char *argv[]) {
       printHelp(desc);
     }
     else if (vm.count("command") && vm.count("ev-files") && (walker = createVisitor(vm["command"].as<string>(), cout, imgSegs))) {
-      scoped_array< TSK_TCHAR* >  segments(new TSK_TCHAR*[imgSegs.size()]);
+      boost::scoped_array< TSK_TCHAR* >  segments(new TSK_TCHAR*[imgSegs.size()]);
       for (unsigned int i = 0; i < imgSegs.size(); ++i) {
         segments[i] = (TSK_TCHAR*)imgSegs[i].c_str();
       }
@@ -81,7 +84,11 @@ int main(int argc, char *argv[]) {
           return 0;
         }
         else {
+          cout.flush();
           cerr << "Had an error parsing filesystem" << endl;
+          for (auto& err: walker->getErrorList()) {
+            cerr << err.msg1 << " " << err.msg2 << endl;
+          }
         }
       }
       else {

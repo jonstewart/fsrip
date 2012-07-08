@@ -16,7 +16,7 @@ string bytesAsString(const unsigned char* idBeg, const unsigned char* idEnd) {
   return buf.str();
 }
 
-void outputFS(ostream& buf, shared_ptr<Filesystem> fs) {
+void outputFS(ostream& buf, boost::shared_ptr<Filesystem> fs) {
   buf << "," << j(string("filesystem")) << ":{"
       << j("numBlocks", fs->numBlocks(), true)
       << j("blockSize", fs->blockSize())
@@ -39,9 +39,9 @@ void outputFS(ostream& buf, shared_ptr<Filesystem> fs) {
       << "}";
 }
 
-string j(const weak_ptr< Volume >& vol) {
+string j(const boost::weak_ptr< Volume >& vol) {
   stringstream buf;
-  if (shared_ptr< Volume > p = vol.lock()) {
+  if (boost::shared_ptr< Volume > p = vol.lock()) {
     buf << "{"
         << j("description", p->desc(), true)
         << j("flags", p->flags())
@@ -49,7 +49,7 @@ string j(const weak_ptr< Volume >& vol) {
         << j("slotNum", p->slotNum())
         << j("startBlock", p->startBlock())
         << j("tableNum", p->tableNum());
-    if (shared_ptr<Filesystem> fs = p->filesystem().lock()) {
+    if (boost::shared_ptr<Filesystem> fs = p->filesystem().lock()) {
       outputFS(buf, fs);
     }
     buf << "}";
@@ -129,7 +129,7 @@ uint8_t ImageDumper::start() {
 }
 
 uint8_t ImageInfo::start() {
-  shared_ptr<Image> img = Image::wrap(m_img_info, Files, false);
+  boost::shared_ptr<Image> img = Image::wrap(m_img_info, Files, false);
 
   Out << "{";
 
@@ -139,7 +139,7 @@ uint8_t ImageInfo::start() {
       << j("description", img->desc())
       << j("size", img->size());
 
-  if (shared_ptr<VolumeSystem> vs = img->volumeSystem().lock()) {
+  if (boost::shared_ptr<VolumeSystem> vs = img->volumeSystem().lock()) {
     Out << "," << j("volumeSystem") << ":{"
         << j("type", vs->type(), true)
         << j("description", vs->desc())
@@ -157,7 +157,7 @@ uint8_t ImageInfo::start() {
     }
     Out << "}";
   }
-  else if (shared_ptr<Filesystem> fs = img->filesystem().lock()) {
+  else if (boost::shared_ptr<Filesystem> fs = img->filesystem().lock()) {
     outputFS(Out, fs);
   }
   else {
@@ -262,4 +262,26 @@ TSK_RETVAL_ENUM MetadataWriter::processFile(TSK_FS_FILE* file, const char* path)
   // cerr << "finishing callback" << endl;
   FileCounter::processFile(file, path);
   return TSK_OK;
+}
+
+FileWriter::FileWriter(ostream& out):
+  MetadataWriter(out), Buffer(4096, 0) {}
+
+TSK_RETVAL_ENUM FileWriter::processFile(TSK_FS_FILE* file, const char* path) {
+  TSK_RETVAL_ENUM ret = MetadataWriter::processFile(file, path);
+  if (TSK_OK == ret) {
+    size_t size = file->meta->size,
+           cur  = 0;
+    while (cur < size) {
+      ssize_t toRead = std::min(size - cur, Buffer.size());
+      if (toRead == tsk_fs_file_read(file, cur, &Buffer[0], toRead, TSK_FS_FILE_READ_FLAG_NONE)) {
+        Out.write(&Buffer[0], toRead);
+        cur += toRead;
+      }
+      else {
+        throw std::runtime_error("Had a problem reading data out of a file");
+      }
+    }
+  }
+  return ret;
 }

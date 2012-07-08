@@ -18,7 +18,6 @@ Copyright (c) 2010 Lightbox Technologies, Inc. All rights reserved.
 typedef unsigned long long uint64;
 typedef long long int64;
 
-using namespace boost;
 using namespace std;
 
 class Filesystem {
@@ -63,20 +62,20 @@ public:
   uint64 startBlock() const;
   int64 tableNum() const;
 
-  weak_ptr< Filesystem > filesystem() const;
+  boost::weak_ptr< Filesystem > filesystem() const;
 
 private:
   Volume(const TSK_VS_PART_INFO* vol);
 
   const TSK_VS_PART_INFO* Vol;
-  shared_ptr< Filesystem > Fs;
+  boost::shared_ptr< Filesystem > Fs;
 };
 
 class VolumeSystem {
 friend class Image;
   
 public:
-  typedef vector< weak_ptr< Volume > >::const_iterator VolIter;
+  typedef vector< boost::weak_ptr< Volume > >::const_iterator VolIter;
   
   ~VolumeSystem();
 
@@ -86,24 +85,24 @@ public:
   unsigned int type() const;
   string desc() const;
 
-  vector< weak_ptr< Volume > >::const_iterator volBegin() const;
-  vector< weak_ptr< Volume > >::const_iterator volEnd() const;
+  vector< boost::weak_ptr< Volume > >::const_iterator volBegin() const;
+  vector< boost::weak_ptr< Volume > >::const_iterator volEnd() const;
 
-  weak_ptr< Volume > getVol(unsigned int i) const;
+  boost::weak_ptr< Volume > getVol(unsigned int i) const;
   
 private:
   VolumeSystem(TSK_VS_INFO* volInfo);
 
-  vector< shared_ptr< Volume > > Volumes;
-  vector< weak_ptr< Volume > > WeakVols;
+  vector< boost::shared_ptr< Volume > > Volumes;
+  vector< boost::weak_ptr< Volume > > WeakVols;
 
   TSK_VS_INFO* VolInfo;
 };
 
 class Image {
 public:
-  static shared_ptr< Image > open(const vector< string >& files);
-  static shared_ptr< Image > wrap(TSK_IMG_INFO* img, const vector<string>& files, bool close);
+  static boost::shared_ptr< Image > open(const vector< string >& files);
+  static boost::shared_ptr< Image > wrap(TSK_IMG_INFO* img, const vector<string>& files, bool close);
 
   ~Image();
 
@@ -112,8 +111,8 @@ public:
 
   const vector< string >& files() const { return Files; }
 
-  weak_ptr< VolumeSystem > volumeSystem() const;
-  weak_ptr< Filesystem > filesystem() const;
+  boost::weak_ptr< VolumeSystem > volumeSystem() const;
+  boost::weak_ptr< Filesystem > filesystem() const;
 
   ssize_t dump(std::ostream& o) const;
 
@@ -122,7 +121,7 @@ private:
 
   TSK_IMG_INFO* Img;
   vector< string > Files;
-  shared_ptr< VolumeSystem > VS;
-  shared_ptr< Filesystem > Fs;
+  boost::shared_ptr< VolumeSystem > VS;
+  boost::shared_ptr< Filesystem > Fs;
   bool ShouldClose;
 };

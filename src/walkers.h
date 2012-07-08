@@ -68,12 +68,25 @@ public:
   virtual TSK_RETVAL_ENUM processFile(TSK_FS_FILE *fs_file, const char *path);
   virtual void finishWalk() {}
 
+protected:
+  TSK_FS_INFO* Fs;
+
 private:
   string  FsInfo,
           Null,
           CurDir;
 
-  TSK_FS_INFO* Fs;
-
   unsigned int CurDirIndex;
+};
+
+class FileWriter: public MetadataWriter {
+public:
+  FileWriter(ostream& out);
+
+  virtual ~FileWriter() {}
+
+  virtual TSK_RETVAL_ENUM processFile(TSK_FS_FILE *fs_file, const char *path);
+
+private:
+  vector<char> Buffer;
 };
