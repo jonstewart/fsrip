@@ -34,3 +34,10 @@ Commands:
   dumpfs  - output one JSON record per line, detailing all metadata for a 
             directory entry, for all directory entries discovered in the disk 
             image.
+
+  dumpfiles - output a JSON of file metadata (with newline) followed by 
+  			binary of the file contents, then JSON record for next file, and
+  			so on.
+
+  dumpimg - output entire disk image to stdout
+  
