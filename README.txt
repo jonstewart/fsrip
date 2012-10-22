@@ -40,4 +40,3 @@ Commands:
   			so on.
 
   dumpimg - output entire disk image to stdout
-  
