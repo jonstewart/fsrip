@@ -7,6 +7,12 @@
 
 using namespace std;
 
+ssize_t physicalSize(const TSK_FS_FILE* file) {
+  // tsk_fs_file_read
+  // toRead == tsk_fs_file_read(file, cur, &Buffer[0], toRead, TSK_FS_FILE_READ_FLAG_NONE))
+  return 0;
+}
+
 string bytesAsString(const unsigned char* idBeg, const unsigned char* idEnd) {
   stringstream buf;
   buf << hex;
@@ -16,7 +22,7 @@ string bytesAsString(const unsigned char* idBeg, const unsigned char* idEnd) {
   return buf.str();
 }
 
-void outputFS(ostream& buf, boost::shared_ptr<Filesystem> fs) {
+void outputFS(ostream& buf, std::shared_ptr<Filesystem> fs) {
   buf << "," << j(string("filesystem")) << ":{"
       << j("numBlocks", fs->numBlocks(), true)
       << j("blockSize", fs->blockSize())
@@ -39,9 +45,9 @@ void outputFS(ostream& buf, boost::shared_ptr<Filesystem> fs) {
       << "}";
 }
 
-string j(const boost::weak_ptr< Volume >& vol) {
+string j(const std::weak_ptr< Volume >& vol) {
   stringstream buf;
-  if (boost::shared_ptr< Volume > p = vol.lock()) {
+  if (std::shared_ptr< Volume > p = vol.lock()) {
     buf << "{"
         << j("description", p->desc(), true)
         << j("flags", p->flags())
@@ -49,7 +55,7 @@ string j(const boost::weak_ptr< Volume >& vol) {
         << j("slotNum", p->slotNum())
         << j("startBlock", p->startBlock())
         << j("tableNum", p->tableNum());
-    if (boost::shared_ptr<Filesystem> fs = p->filesystem().lock()) {
+    if (std::shared_ptr<Filesystem> fs = p->filesystem().lock()) {
       outputFS(buf, fs);
     }
     buf << "}";
@@ -129,7 +135,7 @@ uint8_t ImageDumper::start() {
 }
 
 uint8_t ImageInfo::start() {
-  boost::shared_ptr<Image> img = Image::wrap(m_img_info, Files, false);
+  std::shared_ptr<Image> img = Image::wrap(m_img_info, Files, false);
 
   Out << "{";
 
@@ -139,7 +145,7 @@ uint8_t ImageInfo::start() {
       << j("description", img->desc())
       << j("size", img->size());
 
-  if (boost::shared_ptr<VolumeSystem> vs = img->volumeSystem().lock()) {
+  if (std::shared_ptr<VolumeSystem> vs = img->volumeSystem().lock()) {
     Out << "," << j("volumeSystem") << ":{"
         << j("type", vs->type(), true)
         << j("description", vs->desc())
@@ -157,7 +163,7 @@ uint8_t ImageInfo::start() {
     }
     Out << "}";
   }
-  else if (boost::shared_ptr<Filesystem> fs = img->filesystem().lock()) {
+  else if (std::shared_ptr<Filesystem> fs = img->filesystem().lock()) {
     outputFS(Out, fs);
   }
   else {
@@ -270,8 +276,10 @@ FileWriter::FileWriter(ostream& out):
 TSK_RETVAL_ENUM FileWriter::processFile(TSK_FS_FILE* file, const char* path) {
   TSK_RETVAL_ENUM ret = MetadataWriter::processFile(file, path);
   if (TSK_OK == ret) {
-    size_t size = file->meta->size,
+    TSK_OFF_T blkSize = Fs->block_size;
+    size_t size = file->meta ? (file->meta->flags == 5 ? file->meta->size: std::min(file->meta->size, blkSize)): 0,
            cur  = 0;
+    Out.write((const char*)&size, sizeof(size));
     while (cur < size) {
       ssize_t toRead = std::min(size - cur, Buffer.size());
       if (toRead == tsk_fs_file_read(file, cur, &Buffer[0], toRead, TSK_FS_FILE_READ_FLAG_NONE)) {

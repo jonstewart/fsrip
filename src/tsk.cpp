@@ -13,7 +13,6 @@ Copyright (c) 2010 Lightbox Technologies, Inc. All rights reserved.
 
 #include <cstdlib>
 
-#include <iostream>
 #include <algorithm>
 
 Filesystem::Filesystem(TSK_FS_INFO* fs): Fs(fs) {}
@@ -34,8 +33,8 @@ unsigned int Filesystem::deviceBlockSize() const {
   return Fs->dev_bsize;
 }
 
-string Filesystem::blockName() const {
-  return string(Fs->duname);
+std::string Filesystem::blockName() const {
+  return std::string(Fs->duname);
 }
 
 bool Filesystem::littleEndian() const {
@@ -54,20 +53,20 @@ unsigned int Filesystem::flags() const {
   return Fs->flags;
 }
 
-vector< unsigned char > Filesystem::fsID() const {
-  vector< unsigned char > ret;
+std::vector< unsigned char > Filesystem::fsID() const {
+  std::vector< unsigned char > ret;
   for (unsigned int i = 0; i < Fs->fs_id_used; ++i) {
     ret.push_back(Fs->fs_id[i]);
   }
   return ret;
 }
 
-string Filesystem::fsIDAsString() const {
-  vector< unsigned char > id(fsID());
-  stringstream buf;
-  buf << hex;
+std::string Filesystem::fsIDAsString() const {
+  std::vector< unsigned char > id(fsID());
+  std::stringstream buf;
+  buf << std::hex;
   for (unsigned int i = 0; i < id.size(); ++i) {
-    buf << hex << (unsigned int)id[i];
+    buf << std::hex << (unsigned int)id[i];
   }
   return buf.str();
 }
@@ -76,8 +75,8 @@ uint64 Filesystem::fsType() const {
   return Fs->ftype;
 }
 
-string Filesystem::fsName() const {
-  return string(tsk_fs_type_toname(Fs->ftype));
+std::string Filesystem::fsName() const {
+  return std::string(tsk_fs_type_toname(Fs->ftype));
 }
 
 uint64 Filesystem::journalInum() const {
@@ -116,7 +115,7 @@ Volume::Volume(const TSK_VS_PART_INFO* vol): Vol(vol) {
   }
 }
 
-string Volume::desc() const {
+std::string Volume::desc() const {
   return std::string(Vol->desc);
 }
 
@@ -140,16 +139,16 @@ int64 Volume::tableNum() const {
   return Vol->table_num;
 }
 
-boost::weak_ptr< Filesystem > Volume::filesystem() const {
-  return boost::weak_ptr<Filesystem>(Fs);
+std::weak_ptr< Filesystem > Volume::filesystem() const {
+  return std::weak_ptr<Filesystem>(Fs);
 }
 //***********************************************************************
 
 VolumeSystem::VolumeSystem(TSK_VS_INFO* volInfo): VolInfo(volInfo) {
   for (unsigned int i = 0; i < VolInfo->part_count; ++i) {
-    boost::shared_ptr<Volume> p(new Volume(tsk_vs_part_get(VolInfo, i)));
+    std::shared_ptr<Volume> p(new Volume(tsk_vs_part_get(VolInfo, i)));
     Volumes.push_back(p);
-    WeakVols.push_back(boost::weak_ptr<Volume>(p));
+    WeakVols.push_back(std::weak_ptr<Volume>(p));
   }
 }
 
@@ -173,24 +172,24 @@ unsigned int VolumeSystem::type() const {
   return VolInfo->vstype;
 }
 
-string VolumeSystem::desc() const {
+std::string VolumeSystem::desc() const {
   return std::string(tsk_vs_type_todesc(VolInfo->vstype));
 }
 
-vector< boost::weak_ptr< Volume > >::const_iterator VolumeSystem::volBegin() const {
+std::vector< std::weak_ptr< Volume > >::const_iterator VolumeSystem::volBegin() const {
   return WeakVols.begin();
 }
 
-vector< boost::weak_ptr< Volume > >::const_iterator VolumeSystem::volEnd() const {
+std::vector< std::weak_ptr< Volume > >::const_iterator VolumeSystem::volEnd() const {
   return WeakVols.end();
 }
 
-boost::weak_ptr< Volume > VolumeSystem::getVol(unsigned int i) const {
-  return boost::weak_ptr<Volume>(Volumes.at(i));
+std::weak_ptr< Volume > VolumeSystem::getVol(unsigned int i) const {
+  return std::weak_ptr<Volume>(Volumes.at(i));
 }
 //***********************************************************************
 
-Image::Image(TSK_IMG_INFO* img, const vector< string >& files, bool close):
+Image::Image(TSK_IMG_INFO* img, const std::vector< std::string >& files, bool close):
   Img(img), Files(files), ShouldClose(close)
 {
   TSK_VS_INFO* vs = tsk_vs_open(img, 0, TSK_VS_TYPE_DETECT);
@@ -209,8 +208,8 @@ Image::~Image() {
   }
 }
 
-boost::shared_ptr< Image > Image::open(const vector< string >& files) {
-  boost::shared_ptr< Image > ret;
+std::shared_ptr< Image > Image::open(const std::vector< std::string >& files) {
+  std::shared_ptr< Image > ret;
   
   const char** evArray = new const char*[files.size()];
   for (unsigned int i = 0; i < files.size(); ++i) {
@@ -225,24 +224,24 @@ boost::shared_ptr< Image > Image::open(const vector< string >& files) {
   return ret;
 }
 
-boost::shared_ptr< Image > Image::wrap(TSK_IMG_INFO* img, const vector<string>& files, bool close) {
-  return boost::shared_ptr<Image>(new Image(img, files, close));
+std::shared_ptr< Image > Image::wrap(TSK_IMG_INFO* img, const std::vector<std::string>& files, bool close) {
+  return std::shared_ptr<Image>(new Image(img, files, close));
 }
 
 uint64  Image::size() const {
   return Img->size;
 }
 
-string  Image::desc() const {
+std::string  Image::desc() const {
   return std::string(tsk_img_type_todesc(Img->itype)); // utf8?
 }
 
-boost::weak_ptr< VolumeSystem > Image::volumeSystem() const {
-  return boost::weak_ptr<VolumeSystem>(VS);
+std::weak_ptr< VolumeSystem > Image::volumeSystem() const {
+  return std::weak_ptr<VolumeSystem>(VS);
 }
 
-boost::weak_ptr< Filesystem > Image::filesystem() const {
-  return boost::weak_ptr<Filesystem>(Fs);
+std::weak_ptr< Filesystem > Image::filesystem() const {
+  return std::weak_ptr<Filesystem>(Fs);
 }
 
 ssize_t Image::dump(std::ostream& o) const {

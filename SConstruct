@@ -24,20 +24,31 @@ print("System is %s, %s" % (arch, platform.machine()))
 if (platform.machine().find('64') > -1):
   bits = '64'
 
-boostType = ARGUMENTS.get('boostType', '')
+vars = Variables('build_variables.py')
+vars.AddVariables(
+  ('boostType', 'Suffix to add to Boost libraries to enable finding them', ''),
+  ('CC', 'set the name of the C compiler to use (scons finds default)', ''),
+  ('CXX', 'set the name of the C++ compiler to use (scons finds default)', ''),
+  ('CXXFLAGS', 'add flags for the C++ compiler to CXXFLAGS', ''),
+  ('LINKFLAGS', 'add flags for the linker to LINKFLAGS', '')
+)
 
-env = Environment(ENV = os.environ) # brings in PATH to give ccache some help
+env = Environment(ENV = os.environ, variables = vars) # brings in PATH to give ccache some help
+print("CC = %s, CXX = %s" % (env['CC'], env['CXX']))
 
 conf = Configure(env)
-if (not (conf.CheckCXXHeader('boost/shared_ptr.hpp')
-   and conf.CheckLib('boost_program_options' + boostType)
+if (not (conf.CheckLib('boost_program_options' + boostType)
    and conf.CheckLib('tsk3'))):
    print('Configure check failed. fsrip needs Boost and The Sleuthkit.')
    Exit(1)
 
 optLibs = checkLibs(conf, ['afflib', 'libewf'])
 
-ccflags = '-Wall -Wno-trigraphs -Wextra -O3 -std=c++0x -Wnon-virtual-dtor'
+ccflags = '-Wall -Wno-trigraphs -Wextra -O3 -std=c++11 -Wnon-virtual-dtor'
 env.Replace(CCFLAGS=ccflags)
+
+vars.Save('build_variables.py', env)
+
+Help(vars.GenerateHelpText(env))
 
 fsrip = sub('src')

@@ -17,28 +17,28 @@ public:
 
 class ImageDumper: public LbtTskAuto {
 public:
-  ImageDumper(ostream& out): Out(out) {}
+  ImageDumper(std::ostream& out): Out(out) {}
 
   virtual uint8_t start();
 
 private:
-  ostream& Out;
+  std::ostream& Out;
 };
 
 class ImageInfo: public LbtTskAuto {
 public:
-  ImageInfo(ostream& out, const vector<string>& files): Out(out), Files(files) {}
+  ImageInfo(std::ostream& out, const std::vector<std::string>& files): Out(out), Files(files) {}
 
   virtual uint8_t start();
 
 private:
-  ostream& Out;
-  vector<string> Files;
+  std::ostream& Out;
+  std::vector<std::string> Files;
 };
 
 class FileCounter: public LbtTskAuto {
 public:
-  FileCounter(ostream& out): NumFiles(0), Out(out) {}
+  FileCounter(std::ostream& out): NumFiles(0), Out(out) {}
 
   virtual ~FileCounter() {}
 
@@ -48,18 +48,18 @@ public:
   }
 
   virtual void finishWalk() {
-    Out << NumFiles << endl;
+    Out << NumFiles << std::endl;
   }
 
   unsigned int NumFiles;
 
 protected:
-  ostream& Out;
+  std::ostream& Out;
 };
 
 class MetadataWriter: public FileCounter {
 public:
-  MetadataWriter(ostream& out);
+  MetadataWriter(std::ostream& out);
 
   virtual ~MetadataWriter() {}
 
@@ -72,7 +72,7 @@ protected:
   TSK_FS_INFO* Fs;
 
 private:
-  string  FsInfo,
+  std::string  FsInfo,
           Null,
           CurDir;
 
@@ -81,12 +81,12 @@ private:
 
 class FileWriter: public MetadataWriter {
 public:
-  FileWriter(ostream& out);
+  FileWriter(std::ostream& out);
 
   virtual ~FileWriter() {}
 
   virtual TSK_RETVAL_ENUM processFile(TSK_FS_FILE *fs_file, const char *path);
 
 private:
-  vector<char> Buffer;
+  std::vector<char> Buffer;
 };

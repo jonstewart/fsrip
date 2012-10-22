@@ -9,8 +9,8 @@ const T& j(const T& x) {
 }
 
 template<>
-const string& j<string>(const string& x) {
-  static string S; // so evil
+const std::string& j<std::string>(const std::string& x) {
+  static std::string S; // so evil
   S = "\"";
   S += x;
   S += "\"";
@@ -20,20 +20,20 @@ const string& j<string>(const string& x) {
 template<class T>
 class JsonPair {
 public:
-  JsonPair(const string& key, const T& val, bool first): Key(key), Value(val), First(first) {}
+  JsonPair(const std::string& key, const T& val, bool first): Key(key), Value(val), First(first) {}
 
-  const string& Key;
+  const std::string& Key;
   const T& Value;
   bool First;
 };
 
 template<class T>
-JsonPair<T> j(const string& key, const T& val, bool first = false) {
+JsonPair<T> j(const std::string& key, const T& val, bool first = false) {
   return JsonPair<T>(key, val, first);
 }
 
 template<class T>
-ostream& operator<<(ostream& out, const JsonPair<T>& pair) {
+std::ostream& operator<<(std::ostream& out, const JsonPair<T>& pair) {
   if (!pair.First) {
     out << ",";
   }

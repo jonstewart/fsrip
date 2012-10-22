@@ -13,13 +13,11 @@ Copyright (c) 2010 Lightbox Technologies, Inc.
 
 #include <boost/program_options.hpp>
 #include <boost/bind.hpp>
-#include <boost/shared_ptr.hpp>
+#include <boost/scoped_array.hpp>
 
 #include "walkers.h"
 
 namespace po = boost::program_options;
-
-using namespace std;
 
 void printHelp(const po::options_description& desc) {
   std::cout << "fsrip, Copyright (c) 2010-2012, Lightbox Technologies, Inc." << std::endl;
@@ -28,24 +26,24 @@ void printHelp(const po::options_description& desc) {
   std::cout << desc << std::endl;
 }
 
-shared_ptr<LbtTskAuto> createVisitor(const string& cmd, ostream& out, const vector<string>& segments) {
+std::shared_ptr<LbtTskAuto> createVisitor(const std::string& cmd, std::ostream& out, const std::vector<std::string>& segments) {
   if (cmd == "dumpimg") {
-    return shared_ptr<LbtTskAuto>(new ImageDumper(out));
+    return std::shared_ptr<LbtTskAuto>(new ImageDumper(out));
   }
   else if (cmd == "dumpfs") {
-    return shared_ptr<LbtTskAuto>(new MetadataWriter(out));
+    return std::shared_ptr<LbtTskAuto>(new MetadataWriter(out));
   }
   else if (cmd == "count") {
-    return shared_ptr<LbtTskAuto>(new FileCounter(out));
+    return std::shared_ptr<LbtTskAuto>(new FileCounter(out));
   }
   else if (cmd == "info") {
-    return shared_ptr<LbtTskAuto>(new ImageInfo(out, segments));
+    return std::shared_ptr<LbtTskAuto>(new ImageInfo(out, segments));
   }
   else if (cmd == "dumpfiles") {
-    return shared_ptr<LbtTskAuto>(new FileWriter(out));
+    return std::shared_ptr<LbtTskAuto>(new FileWriter(out));
   }
   else {
-    return shared_ptr<LbtTskAuto>();
+    return std::shared_ptr<LbtTskAuto>();
   }
 }
 
@@ -56,7 +54,7 @@ int main(int argc, char *argv[]) {
   posOpts.add("ev-files", -1);
   desc.add_options()
     ("help", "produce help message")
-    ("command", po::value< std::string >(), "command to perform [info|dumpimg|dumpfs|count]")
+    ("command", po::value< std::string >(), "command to perform [info|dumpimg|dumpfs|dumpfiles|count]")
     ("ev-files", po::value< std::vector< std::string > >(), "evidence files");
 
   po::variables_map vm;
@@ -64,16 +62,16 @@ int main(int argc, char *argv[]) {
     po::store(po::command_line_parser(argc, argv).options(desc).positional(posOpts).run(), vm);
     po::notify(vm);
 
-    shared_ptr<LbtTskAuto> walker;
+    std::shared_ptr<LbtTskAuto> walker;
 
-    std::vector< string > imgSegs;
+    std::vector< std::string > imgSegs;
     if (vm.count("ev-files")) {
-      imgSegs = vm["ev-files"].as< vector< string > >();
+      imgSegs = vm["ev-files"].as< std::vector< std::string > >();
     }
     if (vm.count("help")) {
       printHelp(desc);
     }
-    else if (vm.count("command") && vm.count("ev-files") && (walker = createVisitor(vm["command"].as<string>(), cout, imgSegs))) {
+    else if (vm.count("command") && vm.count("ev-files") && (walker = createVisitor(vm["command"].as<std::string>(), std::cout, imgSegs))) {
       boost::scoped_array< TSK_TCHAR* >  segments(new TSK_TCHAR*[imgSegs.size()]);
       for (unsigned int i = 0; i < imgSegs.size(); ++i) {
         segments[i] = (TSK_TCHAR*)imgSegs[i].c_str();
@@ -84,15 +82,15 @@ int main(int argc, char *argv[]) {
           return 0;
         }
         else {
-          cout.flush();
-          cerr << "Had an error parsing filesystem" << endl;
+          std::cout.flush();
+          std::cerr << "Had an error parsing filesystem" << std::endl;
           for (auto& err: walker->getErrorList()) {
-            cerr << err.msg1 << " " << err.msg2 << endl;
+            std::cerr << err.msg1 << " " << err.msg2 << std::endl;
           }
         }
       }
       else {
-        cerr << "Had an error opening the evidence file" << endl;
+        std::cerr << "Had an error opening the evidence file" << std::endl;
         return 1;
       }
     }
