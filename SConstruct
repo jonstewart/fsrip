@@ -7,7 +7,7 @@ def shellCall(cmd):
   os.system(cmd)
 
 def sub(src):
-  vars = ['env', 'boostType', 'optLibs']
+  vars = ['env', 'optLibs']
   return env.SConscript(p.join(src, 'SConscript'), exports=vars, variant_dir=p.join('build', src), duplicate=0)
 
 def checkLibs(conf, libs):
@@ -37,7 +37,7 @@ env = Environment(ENV = os.environ, variables = vars) # brings in PATH to give c
 print("CC = %s, CXX = %s" % (env['CC'], env['CXX']))
 
 conf = Configure(env)
-if (not (conf.CheckLib('boost_program_options' + boostType)
+if (not (conf.CheckLib('boost_program_options' + env['boostType'])
    and conf.CheckLib('tsk3'))):
    print('Configure check failed. fsrip needs Boost and The Sleuthkit.')
    Exit(1)

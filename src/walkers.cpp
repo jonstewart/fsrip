@@ -5,25 +5,23 @@
 #include <sstream>
 #include <iomanip>
 
-using namespace std;
-
 ssize_t physicalSize(const TSK_FS_FILE* file) {
   // tsk_fs_file_read
   // toRead == tsk_fs_file_read(file, cur, &Buffer[0], toRead, TSK_FS_FILE_READ_FLAG_NONE))
   return 0;
 }
 
-string bytesAsString(const unsigned char* idBeg, const unsigned char* idEnd) {
-  stringstream buf;
-  buf << hex;
+std::string bytesAsString(const unsigned char* idBeg, const unsigned char* idEnd) {
+  std::stringstream buf;
+  buf << std::hex;
   for (const unsigned char* cur = idBeg; cur < idEnd; ++cur) {
-    buf << hex << (unsigned int)*cur;
+    buf << std::hex << (unsigned int)*cur;
   }
   return buf.str();
 }
 
-void outputFS(ostream& buf, std::shared_ptr<Filesystem> fs) {
-  buf << "," << j(string("filesystem")) << ":{"
+void outputFS(std::ostream& buf, std::shared_ptr<Filesystem> fs) {
+  buf << "," << j(std::string("filesystem")) << ":{"
       << j("numBlocks", fs->numBlocks(), true)
       << j("blockSize", fs->blockSize())
       << j("deviceBlockSize", fs->deviceBlockSize())
@@ -45,8 +43,8 @@ void outputFS(ostream& buf, std::shared_ptr<Filesystem> fs) {
       << "}";
 }
 
-string j(const std::weak_ptr< Volume >& vol) {
-  stringstream buf;
+std::string j(const std::weak_ptr< Volume >& vol) {
+  std::stringstream buf;
   if (std::shared_ptr< Volume > p = vol.lock()) {
     buf << "{"
         << j("description", p->desc(), true)
@@ -64,7 +62,7 @@ string j(const std::weak_ptr< Volume >& vol) {
 }
 
 template<class ItType>
-void writeSequence(ostream& out, ItType begin, ItType end, const string& delimiter) {
+void writeSequence(std::ostream& out, ItType begin, ItType end, const std::string& delimiter) {
   if (begin != end) {
     ItType it(begin);
     out << j(*it);
@@ -74,11 +72,11 @@ void writeSequence(ostream& out, ItType begin, ItType end, const string& delimit
   }
 }
 
-void writeAttr(ostream& out, const TSK_FS_ATTR* a) {
+void writeAttr(std::ostream& out, const TSK_FS_ATTR* a) {
   out << "{"
       << j("flags", a->flags, true)
       << j("id", a->id)
-      << j("name", a->name ? string(a->name): string(""))
+      << j("name", a->name ? std::string(a->name): std::string(""))
       << j("size", a->size)
       << j("type", a->type)
       << j("rd_buf_size", a->rd.buf_size)
@@ -87,12 +85,12 @@ void writeAttr(ostream& out, const TSK_FS_ATTR* a) {
       << j("nrd_initsize", a->nrd.initsize)
       << j("nrd_skiplen", a->nrd.skiplen);
   if (a->flags & TSK_FS_ATTR_RES && a->rd.buf_size && a->rd.buf) {
-    out << ", " << j(string("rd_buf")) << ":\"";
-    ios::fmtflags oldFlags = out.flags();
-    out << hex << setfill('0');
-    size_t numBytes = min(a->rd.buf_size, (size_t)a->size);
+    out << ", " << j(std::string("rd_buf")) << ":\"";
+    std::ios::fmtflags oldFlags = out.flags();
+    out << std::hex << std::setfill('0');
+    size_t numBytes = std::min(a->rd.buf_size, (size_t)a->size);
     for (size_t i = 0; i < numBytes; ++i) {
-      out << setw(2) << (unsigned int)a->rd.buf[i];
+      out << std::setw(2) << (unsigned int)a->rd.buf[i];
     }
     out.flags(oldFlags);
     out << "\"";
@@ -139,8 +137,8 @@ uint8_t ImageInfo::start() {
 
   Out << "{";
 
-  Out << j(string("files")) << ":[";
-  writeSequence(cout, img->files().begin(), img->files().end(), ", ");
+  Out << j(std::string("files")) << ":[";
+  writeSequence(std::cout, img->files().begin(), img->files().end(), ", ");
   Out << "]"
       << j("description", img->desc())
       << j("size", img->size());
@@ -154,12 +152,12 @@ uint8_t ImageInfo::start() {
         << j("offset", vs->offset());
 
     if (vs->numVolumes()) {
-      Out << "," << j(string("volumes")) << ":[";
+      Out << "," << j(std::string("volumes")) << ":[";
       writeSequence(Out, vs->volBegin(), vs->volEnd(), ",");
       Out << "]";
     }
     else {
-      cerr << "Image has volume system, but no volumes" << endl;
+      std::cerr << "Image has volume system, but no volumes" << std::endl;
     }
     Out << "}";
   }
@@ -167,18 +165,18 @@ uint8_t ImageInfo::start() {
     outputFS(Out, fs);
   }
   else {
-    cerr << "Image had neither a volume system nor a filesystem" << endl;
+    std::cerr << "Image had neither a volume system nor a filesystem" << std::endl;
   }
   Out << "}" << std::endl;
   return 0;
 }
 
-MetadataWriter::MetadataWriter(ostream& out):
+MetadataWriter::MetadataWriter(std::ostream& out):
   FileCounter(out), Fs(0), CurDirIndex(0) {}
 
 TSK_FILTER_ENUM MetadataWriter::filterFs(TSK_FS_INFO *fs) {
-  stringstream buf;
-  buf << j(string("fs")) << ":{"
+  std::stringstream buf;
+  buf << j(std::string("fs")) << ":{"
       << j("byteOffset", fs->offset, true)
       << j("blockSize", fs->block_size)
       << j("fsID", bytesAsString(fs->fs_id, &fs->fs_id[fs->fs_id_used]))
@@ -194,12 +192,12 @@ TSK_RETVAL_ENUM MetadataWriter::processFile(TSK_FS_FILE* file, const char* path)
     CurDirIndex = 0;
     CurDir.assign(path);
   }
-  // cerr << "beginning callback" << endl;
+  // std::cerr << "beginning callback" << std::endl;
   try {
     if (file) {
       Out << "{" << FsInfo;
       if (path) {
-        Out << j("path", string(path));
+        Out << j("path", std::string(path));
       }
       if (file->meta) {
         // need to come back for name2 and attrlist      
@@ -213,7 +211,7 @@ TSK_RETVAL_ENUM MetadataWriter::processFile(TSK_FS_FILE* file, const char* path)
             << j("flags", i->flags)
             << j("gid", i->gid);
         if (i->link) {
-          Out << j("link", string(i->link));
+          Out << j("link", std::string(i->link));
         }
         if (TSK_FS_TYPE_ISEXT(Fs->ftype)) {
           Out << j("dtime", i->time2.ext2.dtime);
@@ -236,8 +234,8 @@ TSK_RETVAL_ENUM MetadataWriter::processFile(TSK_FS_FILE* file, const char* path)
             << j("flags", n->flags, true)
             << j("meta_addr", n->meta_addr)
             << j("meta_seq", n->meta_seq)
-            << j("name", (n->name && n->name_size ? string(n->name): Null))
-            << j("shrt_name", (n->shrt_name && n->shrt_name_size ? string(n->shrt_name): Null))
+            << j("name", (n->name && n->name_size ? std::string(n->name): Null))
+            << j("shrt_name", (n->shrt_name && n->shrt_name_size ? std::string(n->shrt_name): Null))
             << j("type", n->type)
             << j("dirIndex", CurDirIndex)
             << "}";
@@ -259,18 +257,18 @@ TSK_RETVAL_ENUM MetadataWriter::processFile(TSK_FS_FILE* file, const char* path)
         }
         Out << "]";
       }
-      Out << "}" << endl;
+      Out << "}" << std::endl;
     }
   }
   catch (std::exception& e) {
-    cerr << "Error on " << NumFiles << ": " << e.what() << endl;
+    std::cerr << "Error on " << NumFiles << ": " << e.what() << std::endl;
   }
-  // cerr << "finishing callback" << endl;
+  // std::cerr << "finishing callback" << std::endl;
   FileCounter::processFile(file, path);
   return TSK_OK;
 }
 
-FileWriter::FileWriter(ostream& out):
+FileWriter::FileWriter(std::ostream& out):
   MetadataWriter(out), Buffer(4096, 0) {}
 
 TSK_RETVAL_ENUM FileWriter::processFile(TSK_FS_FILE* file, const char* path) {
