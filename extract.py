@@ -15,7 +15,8 @@ def getHashSize(physicalSize, metadata):
   return size
 
 def getPath(metadata):
-  return metadata['path'] + metadata['name']['name'], metadata['name']['name']
+  name = metadata['name']['name']
+  return metadata['path'] + name, name
 
 def exportFile(path, data):
   dir = os.path.dirname(path)
