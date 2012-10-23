@@ -5,10 +5,27 @@
 #include <sstream>
 #include <iomanip>
 
+TSK_WALK_RET_ENUM sumSizeWalkCallback(TSK_FS_FILE *,
+                        TSK_OFF_T,
+                        TSK_DADDR_T,
+                        char *,
+                        size_t a_len,
+                        TSK_FS_BLOCK_FLAG_ENUM,
+                        void *a_ptr)
+{
+  *(reinterpret_cast<ssize_t*>(a_ptr)) += a_len;
+  return TSK_WALK_CONT;
+}
+
 ssize_t physicalSize(const TSK_FS_FILE* file) {
-  // tsk_fs_file_read
-  // toRead == tsk_fs_file_read(file, cur, &Buffer[0], toRead, TSK_FS_FILE_READ_FLAG_NONE))
-  return 0;
+  // this uses tsk_walk with an option not to read data, in order to determine true size
+  // includes slack, so should map well to EnCase's physical size
+  ssize_t size = 0;
+  uint8_t good = tsk_fs_file_walk(const_cast<TSK_FS_FILE*>(file),
+                   TSK_FS_FILE_WALK_FLAG_ENUM(TSK_FS_FILE_WALK_FLAG_AONLY | TSK_FS_FILE_WALK_FLAG_SLACK),
+                    &sumSizeWalkCallback,
+                    &size);
+  return good == 0 ? size: 0;
 }
 
 std::string bytesAsString(const unsigned char* idBeg, const unsigned char* idEnd) {
@@ -172,7 +189,7 @@ uint8_t ImageInfo::start() {
 }
 
 MetadataWriter::MetadataWriter(std::ostream& out):
-  FileCounter(out), Fs(0), CurDirIndex(0) {}
+  FileCounter(out), Fs(0), PhysicalSize(-1), CurDirIndex(0) {}
 
 TSK_FILTER_ENUM MetadataWriter::filterFs(TSK_FS_INFO *fs) {
   std::stringstream buf;
@@ -195,10 +212,12 @@ TSK_RETVAL_ENUM MetadataWriter::processFile(TSK_FS_FILE* file, const char* path)
   // std::cerr << "beginning callback" << std::endl;
   try {
     if (file) {
-      Out << "{" << FsInfo;
-      if (path) {
-        Out << j("path", std::string(path));
-      }
+      PhysicalSize = physicalSize(file);
+
+      Out << "{" << FsInfo
+          << j("path", path? std::string(path): "")
+          << j("physicalSize", PhysicalSize);
+
       if (file->meta) {
         // need to come back for name2 and attrlist      
         TSK_FS_META* i = file->meta;
@@ -274,13 +293,12 @@ FileWriter::FileWriter(std::ostream& out):
 TSK_RETVAL_ENUM FileWriter::processFile(TSK_FS_FILE* file, const char* path) {
   TSK_RETVAL_ENUM ret = MetadataWriter::processFile(file, path);
   if (TSK_OK == ret) {
-    TSK_OFF_T blkSize = Fs->block_size;
-    size_t size = file->meta ? (file->meta->flags == 5 ? file->meta->size: std::min(file->meta->size, blkSize)): 0,
+    size_t size = PhysicalSize == -1 ? 0: PhysicalSize,
            cur  = 0;
     Out.write((const char*)&size, sizeof(size));
     while (cur < size) {
       ssize_t toRead = std::min(size - cur, Buffer.size());
-      if (toRead == tsk_fs_file_read(file, cur, &Buffer[0], toRead, TSK_FS_FILE_READ_FLAG_NONE)) {
+      if (toRead == tsk_fs_file_read(file, cur, &Buffer[0], toRead, TSK_FS_FILE_READ_FLAG_SLACK)) {
         Out.write(&Buffer[0], toRead);
         cur += toRead;
       }

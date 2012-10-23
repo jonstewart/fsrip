@@ -71,6 +71,8 @@ public:
 protected:
   TSK_FS_INFO* Fs;
 
+  ssize_t  PhysicalSize;
+
 private:
   std::string  FsInfo,
           Null,
