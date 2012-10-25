@@ -7,7 +7,7 @@ About:
 ------
 
 fsrip is a simple utility for extracting volume and filesystem information 
-from disks and disk images in bulk. fsrip uses The Sleuthkit 
+as JSON from disks and disk images in bulk. fsrip uses [The Sleuthkit]
 (http://www.sleuthkit.org/sleuthkit) to do the heavy lifting.
 
 fsrip is released under version 2 of the Apache license. See LICENSE.txt for 
@@ -26,25 +26,44 @@ work, using a wild card for the segment number:
 ### Commands:
 
 - *info*    
-> output one JSON record concerning the disk image, its volume system, and 
+> Output one JSON record concerning the disk image, its volume system, and 
 volumes and filesystems, but not directory entries.
 
 - *count*
-> output the total number of directory entries discovered in the disk image.
+> Output the total number of directory entries discovered in the disk image.
 
 - *dumpfs*
-> output one JSON record per line, detailing all metadata for a directory 
+> Output one JSON record per line, detailing all metadata for a directory 
 entry, for all directory entries discovered in the disk image.
 
+> The JSON record hews closely to TSK_FS_FILE in The Sleuthkit, with a few
+differences. Here is an example:
+
+    {
+      "fs":{"byteOffset":1048576,"blockSize":512,"fsID":"f7c7b628"},
+      "path":"Documents/",
+      "physicalSize":4096,
+      "meta":{"addr":9839041,"atime":1344312000,"content_len":8,
+        "crtime":1340828653,"ctime":0,"flags":5,"gid":0,"mode":511,
+        "mtime":1340828652,"nlink":1,"seq":0,"size":4061,"type":1,"uid":0},
+      "name":{"flags":1,"meta_addr":9839041,"meta_seq":0,
+        "name":"SANS-talk.html","shrt_name":"SANS-T~2.HTM","type":5,
+        "dirIndex":1},
+      "attrs":[{"flags":3,"id":0,"name":"","size":4061,"type":1,
+        "rd_buf_size":0,"nrd_allocsize":4096,"nrd_compsize":0,
+        "nrd_initsize":4061,"nrd_skiplen":0,"nrd_runs":[{"addr":1531152,
+        "flags":0,"len":8,"offset":0}]}]
+    }
+
 - *dumpfiles*
-> output a JSON record of file metadata with newline, followed by the size of
+> Output a JSON record of file metadata with newline, followed by the size of
 the file contents (8 bytes in binary), followed by the file contents, with
 slack, and then repeated again for the next file until all files have been
 output. extract.py and hasher.py are examples of python scripts which can read
 this output.
 
 - *dumpimg*
-> output entire disk image to stdout
+> Output entire disk image to stdout.
 
 ### Dependencies:
 
@@ -80,7 +99,7 @@ and you should see output like this:
 and you can then run fsrip like so:
 
     ./build/src/fsrip --help
-    
+
     fsrip, Copyright (c) 2010-2012, Lightbox Technologies, Inc.
     Built Oct 25 2012
     TSK version is 4.0.0
