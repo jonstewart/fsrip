@@ -45,10 +45,10 @@ contents, then JSON record for next file, and so on.
 
 ### Dependencies:
 
-fsrip depends on the Boost C++ library (http://www.boost.org) and the 
-Sleuthkit (http://www.sleuthkit.org), and uses SCons (http://www.scons.org) as 
-a build tool. The build script will also build fsrip with libewf 
-(http://sourceforge.net/projects/libewf/) and afflib 
+fsrip depends on the [Boost C++ library](http://www.boost.org) and the 
+[Sleuthkit](http://www.sleuthkit.org), and uses [SCons](http://www.scons.org)
+as a build tool. The build script will also build fsrip with [libewf]
+(http://sourceforge.net/projects/libewf/) and [afflib]
 (http://digitalcorpora.org/downloads/) support, though these are technically 
 optional dependencies. libewf and afflib have their own dependencies, the most
 notable being zlib and libcrypto.
