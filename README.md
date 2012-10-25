@@ -45,9 +45,11 @@ work, using a wild card for the segment number:
 
 fsrip depends on the Boost C++ library (http://www.boost.org) and the 
 Sleuthkit (http://www.sleuthkit.org), and uses SCons (http://www.scons.org) as 
-a build tool. The build script will also build fsrip with libewf and afflib 
-support, though these are technically optional dependencies. libewf and afflib 
-have their own dependencies, the most notable being zlib and libcrypto.
+a build tool. The build script will also build fsrip with libewf 
+(http://sourceforge.net/projects/libewf/) and afflib 
+(http://digitalcorpora.org/downloads/) support, though these are technically 
+optional dependencies. libewf and afflib have their own dependencies, the most
+notable being zlib and libcrypto.
 
 You can then build fsrip by typing:
 
