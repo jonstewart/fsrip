@@ -79,15 +79,15 @@ protected:
 
   boost::icl::interval_set<uint64> UnallocatedRuns;
 
-  void markAllocated(const extent& allocated);
+  void writeFile(std::ostream& out, const TSK_FS_FILE* file, uint64 physicalSize);
   void writeAttr(std::ostream& out, const TSK_FS_ATTR* attr);
 
+  void markAllocated(const extent& allocated);
   void flushUnallocated();
 
 private:
   std::string  FsInfo,
-          Null,
-          CurDir;
+               CurDir;
 
   unsigned int CurDirIndex;
 };
