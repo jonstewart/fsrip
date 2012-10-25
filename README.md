@@ -37,8 +37,11 @@ volumes and filesystems, but not directory entries.
 entry, for all directory entries discovered in the disk image.
 
 - *dumpfiles*
-> output a JSON of file metadata (with newline) followed by binary of the file 
-contents, then JSON record for next file, and so on.
+> output a JSON record of file metadata with newline, followed by the size of
+the file contents (8 bytes in binary), followed by the file contents, with
+slack, and then repeated again for the next file until all files have been
+output. extract.py and hasher.py are examples of python scripts which can read
+this output.
 
 - *dumpimg*
 > output entire disk image to stdout
@@ -73,3 +76,16 @@ and you should see output like this:
     clang++ -o build/src/walkers.o -c -g -stdlib=libc++ -Wall -Wno-trigraphs -Wextra -O3 -std=c++11 -Wnon-virtual-dtor src/walkers.cpp
     clang++ -o build/src/fsrip -stdlib=libc++ build/src/main.o build/src/tsk.o build/src/walkers.o -ltsk3 -lboost_program_options -lafflib -lewf
     scons: done building targets.
+
+and you can then run fsrip like so:
+
+    ./build/src/fsrip --help
+    
+    fsrip, Copyright (c) 2010-2012, Lightbox Technologies, Inc.
+    Built Oct 25 2012
+    TSK version is 4.0.0
+    Allowed Options:
+      --help                produce help message
+      --command arg         command to perform [info|dumpimg|dumpfs|dumpfiles|
+                            count]
+      --ev-files arg        evidence files
