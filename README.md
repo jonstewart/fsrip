@@ -25,21 +25,23 @@ work, using a wild card for the segment number:
 
 ### Commands:
 
-- *info*    output one JSON record concerning the disk image, its volume 
-            system, and volumes and filesystems, but not directory entries.
-  
-- *count*   output the total number of directory entries discovered in the 
-            disk image.
-  
-- *dumpfs*  output one JSON record per line, detailing all metadata for a 
-            directory entry, for all directory entries discovered in the disk 
-            image.
+- *info*    
+> output one JSON record concerning the disk image, its volume system, and 
+volumes and filesystems, but not directory entries.
 
-- *dumpfiles* output a JSON of file metadata (with newline) followed by 
-            binary of the file contents, then JSON record for next file, and
-      			so on.
+- *count*
+> output the total number of directory entries discovered in the disk image.
 
-- *dumpimg* output entire disk image to stdout
+- *dumpfs*
+> output one JSON record per line, detailing all metadata for a directory 
+entry, for all directory entries discovered in the disk image.
+
+- *dumpfiles*
+> output a JSON of file metadata (with newline) followed by binary of the file 
+contents, then JSON record for next file, and so on.
+
+- *dumpimg*
+> output entire disk image to stdout
 
 ### Dependencies:
 
