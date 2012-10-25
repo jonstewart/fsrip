@@ -35,7 +35,6 @@ volumes and filesystems, but not directory entries.
 - *dumpfs*
 > Output one JSON record per line, detailing all metadata for a directory 
 entry, for all directory entries discovered in the disk image.
-
 > The JSON record hews closely to TSK_FS_FILE in The Sleuthkit, with a few
 differences. Here is an example:
 
