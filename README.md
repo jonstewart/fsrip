@@ -1,5 +1,6 @@
 fsrip
 =====
+
 Copyright 2010-2011, Lightbox Technologies, Inc
 
 
@@ -26,6 +27,7 @@ work, using a wild card for the segment number:
 
 Commands:
 ---------
+
   info    - output one JSON record concerning the disk image, its volume 
             system, and volumes and filesystems, but not directory entries.
   
