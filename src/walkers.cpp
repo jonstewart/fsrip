@@ -4,6 +4,7 @@
 
 #include <sstream>
 #include <iomanip>
+#include <utility>
 
 TSK_WALK_RET_ENUM sumSizeWalkCallback(TSK_FS_FILE *,
                         TSK_OFF_T,
@@ -78,7 +79,13 @@ std::string j(const std::weak_ptr< Volume >& vol) {
   return buf.str();
 }
 
-template<class ItType>
+std::string j(const boost::icl::discrete_interval<uint64>& i) {
+  std::stringstream buf;
+  buf << "(" << i.lower() << ", " << i.upper() << ")";
+  return buf.str();
+}
+
+template<typename ItType>
 void writeSequence(std::ostream& out, ItType begin, ItType end, const std::string& delimiter) {
   if (begin != end) {
     ItType it(begin);
@@ -89,7 +96,7 @@ void writeSequence(std::ostream& out, ItType begin, ItType end, const std::strin
   }
 }
 
-void writeAttr(std::ostream& out, const TSK_FS_ATTR* a) {
+void MetadataWriter::writeAttr(std::ostream& out, const TSK_FS_ATTR* a) {
   out << "{"
       << j("flags", a->flags, true)
       << j("id", a->id)
@@ -101,6 +108,7 @@ void writeAttr(std::ostream& out, const TSK_FS_ATTR* a) {
       << j("nrd_compsize", a->nrd.compsize)
       << j("nrd_initsize", a->nrd.initsize)
       << j("nrd_skiplen", a->nrd.skiplen);
+
   if (a->flags & TSK_FS_ATTR_RES && a->rd.buf_size && a->rd.buf) {
     out << ", " << j(std::string("rd_buf")) << ":\"";
     std::ios::fmtflags oldFlags = out.flags();
@@ -112,9 +120,13 @@ void writeAttr(std::ostream& out, const TSK_FS_ATTR* a) {
     out.flags(oldFlags);
     out << "\"";
   }
+
   if (a->flags & TSK_FS_ATTR_NONRES && a->nrd.run) {
     out << ", \"nrd_runs\":[";
     for (TSK_FS_ATTR_RUN* curRun = a->nrd.run; curRun; curRun = curRun->next) {
+
+      markAllocated(extent(curRun->addr, curRun->addr + curRun->len));
+
       if (curRun != a->nrd.run) {
         out << ", ";
       }
@@ -150,6 +162,8 @@ uint8_t ImageDumper::start() {
 }
 
 uint8_t ImageInfo::start() {
+  // std::cerr << "starting to read image" << std::endl;
+
   std::shared_ptr<Image> img = Image::wrap(m_img_info, Files, false);
 
   Out << "{";
@@ -158,7 +172,10 @@ uint8_t ImageInfo::start() {
   writeSequence(std::cout, img->files().begin(), img->files().end(), ", ");
   Out << "]"
       << j("description", img->desc())
-      << j("size", img->size());
+      << j("size", img->size())
+      << j("sectorSize", img->sectorSize());
+  Out.flush();
+  // std::cerr << "heyo" << std::endl;
 
   if (std::shared_ptr<VolumeSystem> vs = img->volumeSystem().lock()) {
     Out << "," << j("volumeSystem") << ":{"
@@ -192,6 +209,8 @@ MetadataWriter::MetadataWriter(std::ostream& out):
   FileCounter(out), Fs(0), PhysicalSize(-1), CurDirIndex(0) {}
 
 TSK_FILTER_ENUM MetadataWriter::filterFs(TSK_FS_INFO *fs) {
+  flushUnallocated();
+
   std::stringstream buf;
   buf << j(std::string("fs")) << ":{"
       << j("byteOffset", fs->offset, true)
@@ -200,7 +219,22 @@ TSK_FILTER_ENUM MetadataWriter::filterFs(TSK_FS_INFO *fs) {
       << "}";
   FsInfo = buf.str();
   Fs = fs;
+
+  UnallocatedRuns += boost::icl::discrete_interval<uint64>::right_open(0, fs->block_count);
+  // UnallocatedRuns.clear();
+  // UnallocatedRuns.insert(extent(0, fs->block_count));
+
   return TSK_FILTER_CONT;
+}
+
+void MetadataWriter::flushUnallocated() {
+  // Out << "[";
+  // writeSequence(Out, UnallocatedRuns.begin(), UnallocatedRuns.end(), ", ");
+  // Out << "]\n";
+}
+
+void MetadataWriter::markAllocated(const extent& allocated) {
+  UnallocatedRuns -= boost::icl::discrete_interval<uint64>::right_open(allocated.first, allocated.second);
 }
 
 TSK_RETVAL_ENUM MetadataWriter::processFile(TSK_FS_FILE* file, const char* path) {
@@ -285,6 +319,10 @@ TSK_RETVAL_ENUM MetadataWriter::processFile(TSK_FS_FILE* file, const char* path)
   // std::cerr << "finishing callback" << std::endl;
   FileCounter::processFile(file, path);
   return TSK_OK;
+}
+
+void MetadataWriter::finishWalk() {
+  flushUnallocated();
 }
 
 FileWriter::FileWriter(std::ostream& out):

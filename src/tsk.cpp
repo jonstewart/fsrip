@@ -192,13 +192,17 @@ std::weak_ptr< Volume > VolumeSystem::getVol(unsigned int i) const {
 Image::Image(TSK_IMG_INFO* img, const std::vector< std::string >& files, bool close):
   Img(img), Files(files), ShouldClose(close)
 {
+  // std::cerr << "opening volumeSystem, sector size = " << Img->sector_size << ", desc = " << desc() << std::endl;
   TSK_VS_INFO* vs = tsk_vs_open(img, 0, TSK_VS_TYPE_DETECT);
   if (vs) {
     VS.reset(new VolumeSystem(vs));
   }
-  TSK_FS_INFO* fs = tsk_fs_open_img(img, 0, TSK_FS_TYPE_DETECT);
-  if (fs) {
-    Fs.reset(new Filesystem(fs));
+  else {
+    // std::cerr << "opening fileSystem" << std::endl;
+    TSK_FS_INFO* fs = tsk_fs_open_img(img, 0, TSK_FS_TYPE_DETECT);
+    if (fs) {
+      Fs.reset(new Filesystem(fs));
+    }
   }
 }
 
@@ -234,6 +238,10 @@ uint64  Image::size() const {
 
 std::string  Image::desc() const {
   return std::string(tsk_img_type_todesc(Img->itype)); // utf8?
+}
+
+uint64  Image::sectorSize() const {
+  return Img->sector_size;
 }
 
 std::weak_ptr< VolumeSystem > Image::volumeSystem() const {

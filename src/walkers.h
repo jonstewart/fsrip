@@ -2,6 +2,8 @@
 
 #include "tsk.h"
 
+#include <boost/icl/interval_set.hpp>
+
 class LbtTskAuto: public TskAuto {
 public:
   virtual ~LbtTskAuto() {}
@@ -59,6 +61,8 @@ protected:
 
 class MetadataWriter: public FileCounter {
 public:
+  typedef std::pair<TSK_DADDR_T, TSK_DADDR_T> extent;
+
   MetadataWriter(std::ostream& out);
 
   virtual ~MetadataWriter() {}
@@ -66,12 +70,19 @@ public:
   virtual TSK_FILTER_ENUM filterFs(TSK_FS_INFO *fs_info);
 
   virtual TSK_RETVAL_ENUM processFile(TSK_FS_FILE *fs_file, const char *path);
-  virtual void finishWalk() {}
+  virtual void finishWalk();
 
 protected:
   TSK_FS_INFO* Fs;
 
   ssize_t  PhysicalSize;
+
+  boost::icl::interval_set<uint64> UnallocatedRuns;
+
+  void markAllocated(const extent& allocated);
+  void writeAttr(std::ostream& out, const TSK_FS_ATTR* attr);
+
+  void flushUnallocated();
 
 private:
   std::string  FsInfo,

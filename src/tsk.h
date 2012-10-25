@@ -107,6 +107,7 @@ public:
 
   uint64  size() const;
   std::string  desc() const;
+  uint64  sectorSize() const;
 
   const std::vector< std::string >& files() const { return Files; }
 
