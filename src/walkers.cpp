@@ -4,6 +4,7 @@
 
 #include <sstream>
 #include <iomanip>
+#include <cmath>
 #include <utility>
 
 std::string j(const boost::icl::discrete_interval<uint64>& i) {
@@ -266,22 +267,33 @@ void MetadataWriter::writeFile(std::ostream& out, const TSK_FS_FILE* file, uint6
     Out << ", \"name\":";
     writeNameRecord(out, n, CurDirIndex);
   }
-  int numAttrs = tsk_fs_file_attr_getsize(const_cast<TSK_FS_FILE*>(file));
-  if (numAttrs > 0) {
-    Out << ", \"attrs\":[";
-    uint num = 0;
-    for (int i = 0; i < numAttrs; ++i) {
-      const TSK_FS_ATTR* a = tsk_fs_file_attr_get_idx(const_cast<TSK_FS_FILE*>(file), i);
-      if (a) {
-        if (num > 0) {
-          Out << ", ";
+
+  Out << ", \"attrs\":[";
+  if (file->meta->attr_state & TSK_FS_META_ATTR_STUDIED && file->meta->attr) {
+    for (const TSK_FS_ATTR* a = file->meta->attr->head; a; a = a->next) {
+      if (a != file->meta->attr->head) {
+        Out << ", ";
+      }
+      writeAttr(Out, a);
+    }
+  }
+  else {
+    int numAttrs = tsk_fs_file_attr_getsize(const_cast<TSK_FS_FILE*>(file));
+    if (numAttrs > 0) {
+      uint num = 0;
+      for (int i = 0; i < numAttrs; ++i) {
+        const TSK_FS_ATTR* a = tsk_fs_file_attr_get_idx(const_cast<TSK_FS_FILE*>(file), i);
+        if (a) {
+          if (num > 0) {
+            Out << ", ";
+          }
+          writeAttr(Out, a);
+          ++num;
         }
-        writeAttr(Out, a);
-        ++num;
       }
     }
-    Out << "]";
   }
+  Out << "]";
   Out << "}" << std::endl;
 }
 
@@ -336,6 +348,88 @@ void MetadataWriter::markAllocated(const extent& allocated) {
 }
 
 void MetadataWriter::flushUnallocated() {
+  CurDir = "$Unallocated/";
+  CurDirIndex = 0;
+
+  TSK_FS_NAME nameRec;
+  TSK_FS_META metaRec;
+  TSK_FS_FILE fileRec;
+
+  fileRec.name = &nameRec;
+  fileRec.meta = &metaRec;
+  fileRec.fs_info = Fs;
+
+  nameRec.flags = TSK_FS_NAME_FLAG_UNALLOC;
+  nameRec.meta_addr = 0;
+  nameRec.meta_seq = 0;
+  nameRec.type = TSK_FS_NAME_TYPE_VIRT;
+
+  TSK_FS_ATTR_RUN run;
+  run.flags = TSK_FS_ATTR_RUN_FLAG_NONE;
+  run.next = 0;
+  run.offset = 0;
+
+  TSK_FS_ATTR     attr;
+  attr.flags = TSK_FS_ATTR_NONRES;
+  attr.fs_file = &fileRec;
+  attr.id = 0;
+  attr.name = 0;
+  attr.name_size = 0;
+  attr.next = 0;
+  attr.nrd.compsize = 0;
+  attr.nrd.run = &run;
+  attr.nrd.run_end = &run;
+  attr.nrd.skiplen = 0;
+  attr.rd.buf = 0;
+  attr.rd.buf_size = 0;
+  attr.rd.offset = 0;
+  attr.type = TSK_FS_ATTR_TYPE_ENUM(128);
+
+  TSK_FS_ATTRLIST attrList;
+  attrList.head = &attr;
+
+  metaRec.addr = 0;
+  metaRec.atime = 0;
+  metaRec.atime_nano = 0;
+  metaRec.attr = &attrList;
+  metaRec.attr_state = TSK_FS_META_ATTR_STUDIED;
+  metaRec.content_len = 0; // ???
+  metaRec.content_ptr = 0;
+  metaRec.crtime = 0;
+  metaRec.crtime_nano = 0;
+  metaRec.ctime = 0;
+  metaRec.ctime_nano = 0;
+  metaRec.flags = TSK_FS_META_FLAG_UNALLOC;
+  metaRec.gid = 0;
+  metaRec.link = 0;
+  metaRec.mode = TSK_FS_META_MODE_ENUM(0);
+  metaRec.mtime = 0;
+  metaRec.mtime_nano = 0;
+  metaRec.name2 = 0;
+  metaRec.nlink = 0;
+  metaRec.seq = 0;
+  metaRec.size = 0; // need to reset this.
+  metaRec.time2.ext2.dtime = 0;
+  metaRec.time2.ext2.dtime_nano = 0;
+  metaRec.type = TSK_FS_META_TYPE_VIRT;
+  metaRec.uid = 0;
+
+  for (auto unallocated: UnallocatedRuns) {
+    run.addr = unallocated.lower();
+    run.len = unallocated.upper() - run.addr;
+    attr.size = run.len * Fs->block_size;
+    std::stringstream buf;
+    buf << std::setw(std::log10(Fs->block_count) + 1) << std::setfill('0')
+      << run.addr << "-" << run.len;
+    std::string name = buf.str();
+    nameRec.name = nameRec.shrt_name = const_cast<char*>(name.c_str());
+    nameRec.name_size = nameRec.shrt_name_size = std::strlen(nameRec.name);
+
+    writeFile(Out, &fileRec, attr.size);
+
+    ++CurDirIndex;
+  }
+
   // Out << "[";
   // writeSequence(Out, UnallocatedRuns.begin(), UnallocatedRuns.end(), ", ");
   // Out << "]\n";
