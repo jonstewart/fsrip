@@ -37,8 +37,8 @@ volumes and filesystems, but not directory entries.
 entry, for all directory entries discovered in the disk image. The JSON record
 hews closely to TSK_FS_FILE in The Sleuthkit, with a few differences. Here is
 an example:
-
->   { 
+>
+>     { 
       "fs":{"byteOffset":1048576,"blockSize":512,"fsID":"f7c7b628"},
       "path":"Documents/",
       "physicalSize":4096,
@@ -52,7 +52,7 @@ an example:
         "rd_buf_size":0,"nrd_allocsize":4096,"nrd_compsize":0,
         "nrd_initsize":4061,"nrd_skiplen":0,"nrd_runs":[{"addr":1531152,
         "flags":0,"len":8,"offset":0}]}]
-    }
+      }
 
 - *dumpfiles*
 > Output a JSON record of file metadata with newline, followed by the size of
