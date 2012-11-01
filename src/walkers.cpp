@@ -347,7 +347,14 @@ void MetadataWriter::markAllocated(const extent& allocated) {
   UnallocatedRuns -= boost::icl::discrete_interval<uint64>::right_open(allocated.first, allocated.second);
 }
 
+void MetadataWriter::processUnallocatedFile(const TSK_FS_FILE* file, uint64 physicalSize) {
+  writeFile(Out, file, physicalSize);
+}
+
 void MetadataWriter::flushUnallocated() {
+  if (!Fs) {
+    return;
+  }
   CurDir = "$Unallocated/";
   CurDirIndex = 0;
 
@@ -414,18 +421,21 @@ void MetadataWriter::flushUnallocated() {
   metaRec.type = TSK_FS_META_TYPE_VIRT;
   metaRec.uid = 0;
 
+  unsigned int fieldWidth = std::log10(Fs->block_count) + 1;
+  std::string  name;
+
   for (auto unallocated: UnallocatedRuns) {
     run.addr = unallocated.lower();
     run.len = unallocated.upper() - run.addr;
     attr.size = run.len * Fs->block_size;
     std::stringstream buf;
-    buf << std::setw(std::log10(Fs->block_count) + 1) << std::setfill('0')
+    buf << std::setw(fieldWidth) << std::setfill('0')
       << run.addr << "-" << run.len;
-    std::string name = buf.str();
+    name = buf.str();
     nameRec.name = nameRec.shrt_name = const_cast<char*>(name.c_str());
     nameRec.name_size = nameRec.shrt_name_size = std::strlen(nameRec.name);
 
-    writeFile(Out, &fileRec, attr.size);
+    processUnallocatedFile(&fileRec, attr.size);
 
     ++CurDirIndex;
   }
@@ -437,7 +447,7 @@ void MetadataWriter::flushUnallocated() {
 /*************************************************************************/
 
 FileWriter::FileWriter(std::ostream& out):
-  MetadataWriter(out), Buffer(4096, 0) {}
+  MetadataWriter(out), Buffer(1024 * 1024, 0) {}
 
 TSK_RETVAL_ENUM FileWriter::processFile(TSK_FS_FILE* file, const char* path) {
   TSK_RETVAL_ENUM ret = MetadataWriter::processFile(file, path);
@@ -457,4 +467,8 @@ TSK_RETVAL_ENUM FileWriter::processFile(TSK_FS_FILE* file, const char* path) {
     }
   }
   return ret;
+}
+
+void FileWriter::processUnallocatedFile(const TSK_FS_FILE* file, uint64 physicalSize) {
+//  writeFile(Out, file, physicalSize);
 }
