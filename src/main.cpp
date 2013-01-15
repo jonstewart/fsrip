@@ -77,6 +77,7 @@ int main(int argc, char *argv[]) {
         segments[i] = (TSK_TCHAR*)imgSegs[i].c_str();
       }
       if (0 == walker->openImage(imgSegs.size(), segments.get(), TSK_IMG_TYPE_DETECT, 0)) {
+        walker->setFileFilterFlags(TSK_FS_DIR_WALK_FLAG_NOORPHAN);
         if (0 == walker->start()) {
           walker->finishWalk();
           return 0;

@@ -75,7 +75,8 @@ public:
 protected:
   TSK_FS_INFO* Fs;
 
-  ssize_t  PhysicalSize;
+  ssize_t     PhysicalSize;
+  std::string CurDir;
 
   boost::icl::interval_set<uint64> UnallocatedRuns;
 
@@ -88,8 +89,7 @@ protected:
   virtual void processUnallocatedFile(const TSK_FS_FILE* file, uint64 physicalSize);
 
 private:
-  std::string  FsInfo,
-               CurDir;
+  std::string  FsInfo;
 
   unsigned int CurDirIndex;
 };
