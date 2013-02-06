@@ -48,6 +48,8 @@ std::shared_ptr<LbtTskAuto> createVisitor(const std::string& cmd, std::ostream& 
 }
 
 int main(int argc, char *argv[]) {
+  std::string ucMode;
+
   po::options_description desc("Allowed Options");
   po::positional_options_description posOpts;
   posOpts.add("command", 1);
@@ -55,6 +57,7 @@ int main(int argc, char *argv[]) {
   desc.add_options()
     ("help", "produce help message")
     ("command", po::value< std::string >(), "command to perform [info|dumpimg|dumpfs|dumpfiles|count]")
+    ("unallocated", po::value< std::string >(&ucMode)->default_value("none"), "how to handle unallocated [none|fragment|block]")
     ("ev-files", po::value< std::vector< std::string > >(), "evidence files");
 
   po::variables_map vm;
@@ -78,7 +81,17 @@ int main(int argc, char *argv[]) {
       }
       if (0 == walker->openImage(imgSegs.size(), segments.get(), TSK_IMG_TYPE_DETECT, 0)) {
         walker->setFileFilterFlags(TSK_FS_DIR_WALK_FLAG_NOORPHAN);
+        if (ucMode == "fragment") {
+          walker->setUnallocatedMode(LbtTskAuto::FRAGMENT);
+        }
+        else if (ucMode == "block") {
+          walker->setUnallocatedMode(LbtTskAuto::BLOCK);
+        }
+        else {
+          walker->setUnallocatedMode(LbtTskAuto::NONE);
+        }
         if (0 == walker->start()) {
+          walker->startUnallocated();
           walker->finishWalk();
           return 0;
         }

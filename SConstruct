@@ -34,18 +34,26 @@ vars.AddVariables(
 )
 
 env = Environment(ENV = os.environ, variables = vars) # brings in PATH to give ccache some help
-print("CC = %s, CXX = %s" % (env['CC'], env['CXX']))
+
+env.Replace(LIBPATH=['#/vendors/lib'])
+
 
 conf = Configure(env)
-if (not (conf.CheckLib('boost_program_options' + env['boostType'])
-   and conf.CheckLib('tsk3'))):
-   print('Configure check failed. fsrip needs Boost and The Sleuthkit.')
-   Exit(1)
+# if (not (conf.CheckLib('boost_program_options' + env['boostType'])
+#    and conf.CheckLib('tsk3'))):
+#    print('Configure check failed. fsrip needs Boost and The Sleuthkit.')
+#    Exit(1)
 
-optLibs = checkLibs(conf, ['afflib', 'libewf'])
+#optLibs = checkLibs(conf, ['afflib', 'libewf'])
+optLibs = ['afflib', 'libewf']
 
-ccflags = '-Wall -Wno-trigraphs -Wextra -O3 -std=c++11 -Wnon-virtual-dtor'
+ccflags = '-Wall -Wno-trigraphs -Wextra -O1 -g -std=c++11 -Wnon-virtual-dtor'
+
+ccflags += ''.join(' -isystem ' + d for d in filter(p.exists, ['vendors/boost']))
+
 env.Replace(CCFLAGS=ccflags)
+
+print("CC = %s, CXX = %s, CCFLAGS = %s, LIBPATH = %s" % (env['CC'], env['CXX'], env['CCFLAGS'], env['LIBPATH']))
 
 vars.Save('build_variables.py', env)
 
