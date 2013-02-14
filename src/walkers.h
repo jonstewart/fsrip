@@ -93,8 +93,11 @@ public:
 protected:
   TSK_FS_INFO* Fs;
 
-  ssize_t     PhysicalSize;
+  ssize_t     PhysicalSize,
+              DataWritten;
+
   std::string CurDir;
+
   bool        InUnallocated;
 
   UNALLOCATED_HANDLING UCMode;

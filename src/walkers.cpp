@@ -167,7 +167,7 @@ ssize_t physicalSize(const TSK_FS_FILE* file) {
 }
 
 MetadataWriter::MetadataWriter(std::ostream& out):
-  FileCounter(out), Fs(0), PhysicalSize(-1), InUnallocated(false), UCMode(NONE), CurDirIndex(0) {}
+  FileCounter(out), Fs(0), PhysicalSize(-1), DataWritten(0), InUnallocated(false), UCMode(NONE), CurDirIndex(0) {}
 
 TSK_FILTER_ENUM MetadataWriter::filterFs(TSK_FS_INFO *fs) {
   std::string fsID(bytesAsString(fs->fs_id, &fs->fs_id[fs->fs_id_used]));
@@ -208,7 +208,11 @@ TSK_RETVAL_ENUM MetadataWriter::processFile(TSK_FS_FILE* file, const char* path)
   try {
     if (file) {
       PhysicalSize = physicalSize(file);
-      writeFile(Out, file, PhysicalSize);
+      std::stringstream buf;
+      writeFile(buf, file, PhysicalSize);
+      std::string output(buf.str());
+      Out << output;
+      DataWritten += output.size();
     }
   }
   catch (std::exception& e) {
@@ -263,29 +267,29 @@ void writeNameRecord(std::ostream& out, const TSK_FS_NAME* n, unsigned int dirIn
 }
 
 void MetadataWriter::writeFile(std::ostream& out, const TSK_FS_FILE* file, uint64 physicalSize) {
-  Out << "{" << FsInfo
+  out << "{" << FsInfo
       << j("path", CurDir)
       << j("physicalSize", physicalSize);
 
   if (file->meta) {
     // need to come back for name2 and attrlist      
     TSK_FS_META* i = file->meta;
-    Out << ", \"meta\":";
+    out << ", \"meta\":";
     writeMetaRecord(out, i, file->fs_info);
   }
   if (file->name) {
     TSK_FS_NAME* n = file->name;
-    Out << ", \"name\":";
+    out << ", \"name\":";
     writeNameRecord(out, n, CurDirIndex);
   }
 
-  Out << ", \"attrs\":[";
+  out << ", \"attrs\":[";
   if (file->meta && (file->meta->attr_state & TSK_FS_META_ATTR_STUDIED) && file->meta->attr) {
     for (const TSK_FS_ATTR* a = file->meta->attr->head; a; a = a->next) {
       if (a != file->meta->attr->head) {
-        Out << ", ";
+        out << ", ";
       }
-      writeAttr(Out, a, file->meta->flags & TSK_FS_META_FLAG_ALLOC);
+      writeAttr(out, a, file->meta->flags & TSK_FS_META_FLAG_ALLOC);
     }
   }
   else {
@@ -296,16 +300,16 @@ void MetadataWriter::writeFile(std::ostream& out, const TSK_FS_FILE* file, uint6
         const TSK_FS_ATTR* a = tsk_fs_file_attr_get_idx(const_cast<TSK_FS_FILE*>(file), i);
         if (a) {
           if (num > 0) {
-            Out << ", ";
+            out << ", ";
           }
-          writeAttr(Out, a, file->meta->flags & TSK_FS_META_FLAG_ALLOC);
+          writeAttr(out, a, file->meta->flags & TSK_FS_META_FLAG_ALLOC);
           ++num;
         }
       }
     }
   }
-  Out << "]";
-  Out << "}" << std::endl;
+  out << "]";
+  out << "}" << std::endl;
 }
 
 void MetadataWriter::writeAttr(std::ostream& out, const TSK_FS_ATTR* a, const bool isAllocated) {
@@ -362,7 +366,11 @@ void MetadataWriter::markAllocated(const extent& allocated) {
 }
 
 void MetadataWriter::processUnallocatedFile(const TSK_FS_FILE* file, uint64 physicalSize) {
-  writeFile(Out, file, physicalSize);
+  std::stringstream buf;
+  writeFile(buf, file, physicalSize);
+  const std::string output(buf.str());
+  Out << output;
+  DataWritten += output.size();
 }
 
 void MetadataWriter::flushUnallocated() {
@@ -509,7 +517,7 @@ TSK_RETVAL_ENUM FileWriter::processFile(TSK_FS_FILE* file, const char* path) {
   if (TSK_OK == ret) {
     size_t size = PhysicalSize == -1 ? 0: PhysicalSize,
            cur  = 0;
-    //std::cerr << "writing " << fp << ", size = " << size << std::endl;
+    // std::cerr << "writing " << fp << ", size = " << size << std::endl;
     Out.write((const char*)&size, sizeof(size));
     while (cur < size) {
       ssize_t toRead = std::min(size - cur, Buffer.size());
@@ -521,7 +529,9 @@ TSK_RETVAL_ENUM FileWriter::processFile(TSK_FS_FILE* file, const char* path) {
         throw std::runtime_error("Had a problem reading data out of a file");
       }
     }
+    DataWritten += cur;
   }
+  // std::cerr << "Done with " << fp << ", DataWritten = " << DataWritten << std::endl;
   //std::cerr << "done processing " << fp << std::endl;
   return ret;
 }
