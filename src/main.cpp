@@ -75,11 +75,11 @@ int main(int argc, char *argv[]) {
       printHelp(desc);
     }
     else if (vm.count("command") && vm.count("ev-files") && (walker = createVisitor(vm["command"].as<std::string>(), std::cout, imgSegs))) {
-      boost::scoped_array< TSK_TCHAR* >  segments(new TSK_TCHAR*[imgSegs.size()]);
+      boost::scoped_array< const char* >  segments(new const char*[imgSegs.size()]);
       for (unsigned int i = 0; i < imgSegs.size(); ++i) {
-        segments[i] = (TSK_TCHAR*)imgSegs[i].c_str();
+        segments[i] = imgSegs[i].c_str();
       }
-      if (0 == walker->openImage(imgSegs.size(), segments.get(), TSK_IMG_TYPE_DETECT, 0)) {
+      if (0 == walker->openImageUtf8(imgSegs.size(), segments.get(), TSK_IMG_TYPE_DETECT, 0)) {
         walker->setFileFilterFlags(TSK_FS_DIR_WALK_FLAG_NOORPHAN);
         if (ucMode == "fragment") {
           walker->setUnallocatedMode(LbtTskAuto::FRAGMENT);
@@ -105,6 +105,9 @@ int main(int argc, char *argv[]) {
       }
       else {
         std::cerr << "Had an error opening the evidence file" << std::endl;
+        for (unsigned int i = 0; i < imgSegs.size(); ++i) {
+          std::cerr << " ** seg[" << i << "] = " << imgSegs[i] << std::endl;
+        }
         return 1;
       }
     }
