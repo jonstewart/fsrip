@@ -105,6 +105,8 @@ protected:
   std::map< std::string, boost::icl::interval_set<uint64> > UnallocatedRuns; // FS ID->UC Fragments
   decltype(UnallocatedRuns.begin()) CurUnallocatedItr;
 
+  void setCurDir(const char* path);
+
   void writeFile(std::ostream& out, const TSK_FS_FILE* file, uint64 physicalSize);
   void writeAttr(std::ostream& out, const TSK_FS_ATTR* attr, const bool isAllocated);
 
@@ -129,6 +131,8 @@ public:
 
 private:
   virtual void processUnallocatedFile(const TSK_FS_FILE* file, uint64 physicalSize);
+
+  void writeMetadata(const TSK_FS_FILE* file, uint64 physicalSize);
 
   std::vector<char> Buffer;
 };

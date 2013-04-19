@@ -198,12 +198,16 @@ void MetadataWriter::startUnallocated() {
   }
 }
 
-TSK_RETVAL_ENUM MetadataWriter::processFile(TSK_FS_FILE* file, const char* path) {
+void MetadataWriter::setCurDir(const char* path) {
   ++CurDirIndex;
   if (0 != CurDir.compare(path)) {
     CurDirIndex = 0;
     CurDir.assign(path);
   }
+}
+
+TSK_RETVAL_ENUM MetadataWriter::processFile(TSK_FS_FILE* file, const char* path) {
+  setCurDir(path);
   // std::cerr << "beginning callback" << std::endl;
   try {
     if (file) {
@@ -509,40 +513,58 @@ void MetadataWriter::flushUnallocated() {
 FileWriter::FileWriter(std::ostream& out):
   MetadataWriter(out), Buffer(1024 * 1024, 0) {}
 
+void FileWriter::writeMetadata(const TSK_FS_FILE* file, uint64 physicalSize) {
+  std::stringstream buf;
+  writeFile(buf, file, physicalSize);
+  const std::string output(buf.str());
+
+  uint64 size = output.size();
+  Out.write((const char*)&size, sizeof(size));
+  Out.write(output.data(), size);
+
+  DataWritten += sizeof(size);
+  DataWritten += output.size();
+}
+
 TSK_RETVAL_ENUM FileWriter::processFile(TSK_FS_FILE* file, const char* path) {
   std::string fp(path);
   fp += std::string(file->name->name);
   //std::cerr << "processing " << fp << std::endl;
-  TSK_RETVAL_ENUM ret = MetadataWriter::processFile(file, path);
-  if (TSK_OK == ret) {
-    size_t size = PhysicalSize == -1 ? 0: PhysicalSize,
-           cur  = 0;
-    // std::cerr << "writing " << fp << ", size = " << size << std::endl;
-    Out.write((const char*)&size, sizeof(size));
-    while (cur < size) {
-      ssize_t toRead = std::min(size - cur, Buffer.size());
-      if (toRead == tsk_fs_file_read(file, cur, &Buffer[0], toRead, TSK_FS_FILE_READ_FLAG_SLACK)) {
-        Out.write(&Buffer[0], toRead);
-        cur += toRead;
-      }
-      else {
-        throw std::runtime_error("Had a problem reading data out of a file");
-      }
+  setCurDir(path);
+  PhysicalSize = physicalSize(file);
+  writeMetadata(file, PhysicalSize);
+
+  uint64 size = PhysicalSize == -1 ? 0: PhysicalSize,
+         cur  = 0;
+  // std::cerr << "writing " << fp << ", size = " << size << std::endl;
+  Out.write((const char*)&size, sizeof(size));
+  DataWritten += sizeof(size);
+
+  while (cur < size) {
+    ssize_t toRead = std::min(size - cur, (uint64)Buffer.size());
+    if (toRead == tsk_fs_file_read(file, cur, &Buffer[0], toRead, TSK_FS_FILE_READ_FLAG_SLACK)) {
+      Out.write(&Buffer[0], toRead);
+      cur += toRead;
     }
-    DataWritten += cur;
+    else {
+      throw std::runtime_error("Had a problem reading data out of a file");
+    }
   }
+  DataWritten += cur;
   // std::cerr << "Done with " << fp << ", DataWritten = " << DataWritten << std::endl;
   //std::cerr << "done processing " << fp << std::endl;
-  return ret;
+  return TSK_OK;
 }
 
 void FileWriter::processUnallocatedFile(const TSK_FS_FILE* file, uint64 physicalSize) {
   std::string fp(CurDir);
   fp += std::string(file->name->name);
   // std::cerr << "processing " << fp << std::endl;
-  MetadataWriter::processUnallocatedFile(file, physicalSize);
+
+  writeMetadata(file, physicalSize);
 
   Out.write((const char*)&physicalSize, sizeof(physicalSize));
+  DataWritten += sizeof(physicalSize);
 
   uint64 bytesToWrite = 0;
   auto bytes = Fs->block_size;
@@ -560,6 +582,7 @@ void FileWriter::processUnallocatedFile(const TSK_FS_FILE* file, uint64 physical
       }
     }
   }
+  DataWritten += bytesToWrite;
   if (bytesToWrite != physicalSize) {
     std::stringstream buf;
     buf << "Did not write out expected amount of unallocated data for " << file->name->name << 
