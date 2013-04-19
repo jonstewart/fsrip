@@ -45,7 +45,7 @@ conf = Configure(env)
 #    Exit(1)
 
 #optLibs = checkLibs(conf, ['afflib', 'libewf'])
-optLibs = ['afflib', 'libewf']
+optLibs = ['libewf', 'z']
 
 ccflags = '-Wall -Wno-trigraphs -Wextra -O1 -g -std=c++11 -Wnon-virtual-dtor'
 

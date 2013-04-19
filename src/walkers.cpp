@@ -299,7 +299,7 @@ void MetadataWriter::writeFile(std::ostream& out, const TSK_FS_FILE* file, uint6
   else {
     int numAttrs = tsk_fs_file_attr_getsize(const_cast<TSK_FS_FILE*>(file));
     if (numAttrs > 0) {
-      uint num = 0;
+      unsigned int num = 0;
       for (int i = 0; i < numAttrs; ++i) {
         const TSK_FS_ATTR* a = tsk_fs_file_attr_get_idx(const_cast<TSK_FS_FILE*>(file), i);
         if (a) {

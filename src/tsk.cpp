@@ -215,9 +215,9 @@ Image::~Image() {
 std::shared_ptr< Image > Image::open(const std::vector< std::string >& files) {
   std::shared_ptr< Image > ret;
   
-  const char** evArray = new const char*[files.size()];
+  const TSK_TCHAR** evArray = new const TSK_TCHAR*[files.size()];
   for (unsigned int i = 0; i < files.size(); ++i) {
-    evArray[i] = files[i].c_str();
+    evArray[i] = (const TSK_TCHAR*)files[i].c_str();
   }
   TSK_IMG_INFO* evInfo = tsk_img_open(files.size(), evArray, TSK_IMG_TYPE_DETECT, 0);
   if (evInfo) {
