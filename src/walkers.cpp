@@ -215,7 +215,7 @@ TSK_RETVAL_ENUM MetadataWriter::processFile(TSK_FS_FILE* file, const char* path)
       std::stringstream buf;
       writeFile(buf, file, PhysicalSize);
       std::string output(buf.str());
-      Out << output;
+      Out << output << '\n';
       DataWritten += output.size();
     }
   }
@@ -313,7 +313,7 @@ void MetadataWriter::writeFile(std::ostream& out, const TSK_FS_FILE* file, uint6
     }
   }
   out << "]";
-  out << "}" << std::endl;
+  out << "}";
 }
 
 void MetadataWriter::writeAttr(std::ostream& out, const TSK_FS_ATTR* a, const bool isAllocated) {
