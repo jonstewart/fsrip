@@ -17,6 +17,19 @@ Copyright (c) 2010 Lightbox Technologies, Inc.
 
 #include "walkers.h"
 
+#if defined(__WIN32__) || defined(_WIN32_) || defined(__WIN32) || defined(_WIN32) || defined(WIN32) || defined(__WINDOWS__) || defined(__TOS_WIN__)
+  #include <cstdio>
+  #include <fcntl.h>
+  void std_binary_io() {
+    _setmode( _fileno( stdin  ), _O_BINARY );
+    _setmode( _fileno( stdout ), _O_BINARY );
+    _setmode( _fileno( stderr ), _O_BINARY );
+    std::cin.sync_with_stdio();
+  }
+#else
+  void std_binary_io() { }
+#endif 
+
 namespace po = boost::program_options;
 
 void printHelp(const po::options_description& desc) {
@@ -75,6 +88,8 @@ int main(int argc, char *argv[]) {
       printHelp(desc);
     }
     else if (vm.count("command") && vm.count("ev-files") && (walker = createVisitor(vm["command"].as<std::string>(), std::cout, imgSegs))) {
+      std_binary_io();
+
       boost::scoped_array< const char* >  segments(new const char*[imgSegs.size()]);
       for (unsigned int i = 0; i < imgSegs.size(); ++i) {
         segments[i] = imgSegs[i].c_str();
