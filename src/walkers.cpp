@@ -369,12 +369,13 @@ void MetadataWriter::markAllocated(const extent& allocated) {
   }
 }
 
-void MetadataWriter::processUnallocatedFile(const TSK_FS_FILE* file, uint64 physicalSize) {
+void MetadataWriter::processUnallocatedFile(TSK_FS_FILE* file, uint64 physicalSize) {
   std::stringstream buf;
   writeFile(buf, file, physicalSize);
   const std::string output(buf.str());
-  Out << output;
+  Out << output << '\n';
   DataWritten += output.size();
+  FileCounter::processFile(file, CurDir.c_str());
 }
 
 void MetadataWriter::flushUnallocated() {
@@ -556,7 +557,7 @@ TSK_RETVAL_ENUM FileWriter::processFile(TSK_FS_FILE* file, const char* path) {
   return TSK_OK;
 }
 
-void FileWriter::processUnallocatedFile(const TSK_FS_FILE* file, uint64 physicalSize) {
+void FileWriter::processUnallocatedFile(TSK_FS_FILE* file, uint64 physicalSize) {
   std::string fp(CurDir);
   fp += std::string(file->name->name);
   // std::cerr << "processing " << fp << std::endl;

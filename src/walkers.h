@@ -113,7 +113,7 @@ protected:
   void markAllocated(const extent& allocated);
   void flushUnallocated();
 
-  virtual void processUnallocatedFile(const TSK_FS_FILE* file, uint64 physicalSize);
+  virtual void processUnallocatedFile(TSK_FS_FILE* file, uint64 physicalSize);
 
 private:
   std::string  FsInfo;
@@ -130,7 +130,7 @@ public:
   virtual TSK_RETVAL_ENUM processFile(TSK_FS_FILE *fs_file, const char *path);
 
 private:
-  virtual void processUnallocatedFile(const TSK_FS_FILE* file, uint64 physicalSize);
+  virtual void processUnallocatedFile(TSK_FS_FILE* file, uint64 physicalSize);
 
   void writeMetadata(const TSK_FS_FILE* file, uint64 physicalSize);
 
