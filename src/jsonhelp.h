@@ -8,6 +8,11 @@ const T& j(const T& x) {
   return x;
 }
 
+template<class T>
+const T* j(const T* x) {
+  return x;
+}
+
 template<>
 const std::string& j<std::string>(const std::string& x) {
   static std::string S; // so evil
@@ -15,6 +20,11 @@ const std::string& j<std::string>(const std::string& x) {
   S += x;
   S += "\"";
   return S;
+}
+
+template<>
+const char* j(const char* x) {
+  return (j<std::string>(std::string(x))).c_str();
 }
 
 template<class T>
