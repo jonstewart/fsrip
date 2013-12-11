@@ -14,7 +14,7 @@ Copyright (c) 2010 Lightbox Technologies, Inc. All rights reserved.
 
 #include <boost/function.hpp>
 
-#include <tsk3/libtsk.h>
+#include <tsk/libtsk.h>
 
 typedef unsigned long long uint64;
 typedef long long int64;

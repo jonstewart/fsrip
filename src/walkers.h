@@ -18,10 +18,13 @@ public:
   virtual ~LbtTskAuto() {}
 
   virtual void setUnallocatedMode(const UNALLOCATED_HANDLING) {}
+  virtual void setVolMetadataMode(const int) {} // should have bits set to TSK_VS_PART_FLAG_ENUM
 
   virtual uint8_t start() {
     return findFilesInImg();
   }
+
+  virtual TSK_FILTER_ENUM filterVol(const TSK_VS_PART_INFO*) { return TSK_FILTER_CONT; }
 
   virtual TSK_RETVAL_ENUM processFile(TSK_FS_FILE*, const char*) { return TSK_OK; }
 
@@ -57,6 +60,8 @@ public:
 
   virtual ~FileCounter() {}
 
+  virtual void setVolMetadataMode(const int volMode) { VolMode = volMode; }
+
   virtual TSK_RETVAL_ENUM processFile(TSK_FS_FILE*, const char*) {
     ++NumFiles;
     return TSK_OK;
@@ -69,6 +74,7 @@ public:
   unsigned int NumFiles;
 
 protected:
+  int           VolMode;
   std::ostream& Out;
 };
 
@@ -82,6 +88,7 @@ public:
 
   virtual void setUnallocatedMode(const UNALLOCATED_HANDLING mode) { UCMode = mode; }
 
+  virtual TSK_FILTER_ENUM filterVol(const TSK_VS_PART_INFO* vs_part);
   virtual TSK_FILTER_ENUM filterFs(TSK_FS_INFO *fs_info);
 
   virtual TSK_RETVAL_ENUM processFile(TSK_FS_FILE *fs_file, const char *path);
@@ -106,6 +113,7 @@ protected:
   decltype(UnallocatedRuns.begin()) CurUnallocatedItr;
 
   void setCurDir(const char* path);
+  void setFsInfoStr(TSK_FS_INFO* fs);
 
   void writeFile(std::ostream& out, const TSK_FS_FILE* file, uint64 physicalSize);
   void writeAttr(std::ostream& out, const TSK_FS_ATTR* attr, const bool isAllocated);
@@ -114,6 +122,13 @@ protected:
   void flushUnallocated();
 
   virtual void processUnallocatedFile(TSK_FS_FILE* file, uint64 physicalSize);
+
+  TSK_FS_FILE       DummyFile;
+  TSK_FS_NAME       DummyName;
+  TSK_FS_META       DummyMeta;
+  TSK_FS_ATTRLIST   DummyAttrList;
+  TSK_FS_ATTR       DummyAttr;
+  TSK_FS_ATTR_RUN   DummyAttrRun;
 
 private:
   std::string  FsInfo;

@@ -60,8 +60,30 @@ std::shared_ptr<LbtTskAuto> createVisitor(const std::string& cmd, std::ostream& 
   }
 }
 
+int makeVolMode(const std::string& mode) {
+  if (mode == "none") {
+    return 0;
+  }
+  else if (mode == "unallocated") {
+    return TSK_VS_PART_FLAG_UNALLOC;
+  }
+  else if (mode == "allocated") {
+    return TSK_VS_PART_FLAG_ALLOC;
+  }
+  else if (mode == "metadata") {
+    return TSK_VS_PART_FLAG_META;
+  }
+  else if (mode == "all") {
+    return TSK_VS_PART_FLAG_UNALLOC | TSK_VS_PART_FLAG_ALLOC | TSK_VS_PART_FLAG_META;
+  }
+  else {
+    return -1; // shouldn't happen
+  }
+}
+
 int main(int argc, char *argv[]) {
-  std::string ucMode;
+  std::string ucMode,
+              volMode;
 
   po::options_description desc("Allowed Options");
   po::positional_options_description posOpts;
@@ -71,6 +93,7 @@ int main(int argc, char *argv[]) {
     ("help", "produce help message")
     ("command", po::value< std::string >(), "command to perform [info|dumpimg|dumpfs|dumpfiles|count]")
     ("unallocated", po::value< std::string >(&ucMode)->default_value("none"), "how to handle unallocated [none|fragment|block]")
+    ("volume-entries", po::value< std::string >(&volMode)->default_value("none"), "output metadata entries for volumes [none|unallocated|allocated|metadata|all")
     ("ev-files", po::value< std::vector< std::string > >(), "evidence files");
 
   po::variables_map vm;
@@ -95,7 +118,9 @@ int main(int argc, char *argv[]) {
         segments[i] = imgSegs[i].c_str();
       }
       if (0 == walker->openImageUtf8(imgSegs.size(), segments.get(), TSK_IMG_TYPE_DETECT, 0)) {
-        walker->setFileFilterFlags(TSK_FS_DIR_WALK_FLAG_NOORPHAN);
+        walker->setVolFilterFlags((TSK_VS_PART_FLAG_ENUM)(TSK_VS_PART_FLAG_ALLOC | TSK_VS_PART_FLAG_UNALLOC | TSK_VS_PART_FLAG_META));
+        walker->setFileFilterFlags((TSK_FS_DIR_WALK_FLAG_ENUM)(TSK_FS_DIR_WALK_FLAG_RECURSE | TSK_FS_DIR_WALK_FLAG_UNALLOC | TSK_FS_DIR_WALK_FLAG_ALLOC));
+        walker->setVolMetadataMode(makeVolMode(volMode));
         if (ucMode == "fragment") {
           walker->setUnallocatedMode(LbtTskAuto::FRAGMENT);
         }

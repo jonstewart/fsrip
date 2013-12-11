@@ -1,5 +1,5 @@
 Import('env', 'optLibs')
-libs = ['tsk3', 'boost_program_options' + env['boostType']]
+libs = ['tsk', 'boost_program_options' + env['boostType']]
 libs.extend(optLibs)
 ret = env.Program('fsrip', Glob('*.cpp'), LIBS=libs)
 Return('ret')

@@ -167,9 +167,115 @@ ssize_t physicalSize(const TSK_FS_FILE* file) {
 }
 
 MetadataWriter::MetadataWriter(std::ostream& out):
-  FileCounter(out), Fs(0), PhysicalSize(-1), DataWritten(0), InUnallocated(false), UCMode(NONE), CurDirIndex(0) {}
+  FileCounter(out), Fs(0), PhysicalSize(-1), DataWritten(0), InUnallocated(false), UCMode(NONE), CurDirIndex(0)
+{
+  DummyFile.name = &DummyName;
+  DummyFile.meta = &DummyMeta;
+  DummyFile.fs_info = Fs;
+
+  DummyName.flags = TSK_FS_NAME_FLAG_UNALLOC;
+  DummyName.meta_addr = 0;
+  DummyName.meta_seq = 0;
+  DummyName.type = TSK_FS_NAME_TYPE_VIRT;
+
+  DummyAttrRun.flags = TSK_FS_ATTR_RUN_FLAG_NONE;
+  DummyAttrRun.next = 0;
+  DummyAttrRun.offset = 0;
+
+  DummyAttr.flags = TSK_FS_ATTR_NONRES;
+  DummyAttr.fs_file = &DummyFile;
+  DummyAttr.id = 0;
+  DummyAttr.name = 0;
+  DummyAttr.name_size = 0;
+  DummyAttr.next = 0;
+  DummyAttr.nrd.compsize = 0;
+  DummyAttr.nrd.run = &DummyAttrRun;
+  DummyAttr.nrd.run_end = &DummyAttrRun;
+  DummyAttr.nrd.skiplen = 0;
+  DummyAttr.rd.buf = 0;
+  DummyAttr.rd.buf_size = 0;
+  DummyAttr.rd.offset = 0;
+  DummyAttr.type = TSK_FS_ATTR_TYPE_ENUM(128);
+
+  DummyAttrList.head = &DummyAttr;
+
+  DummyMeta.addr = 0;
+  DummyMeta.atime = 0;
+  DummyMeta.atime_nano = 0;
+  DummyMeta.attr = &DummyAttrList;
+  DummyMeta.attr_state = TSK_FS_META_ATTR_STUDIED;
+  DummyMeta.content_len = 0; // ???
+  DummyMeta.content_ptr = 0;
+  DummyMeta.crtime = 0;
+  DummyMeta.crtime_nano = 0;
+  DummyMeta.ctime = 0;
+  DummyMeta.ctime_nano = 0;
+  DummyMeta.flags = TSK_FS_META_FLAG_UNALLOC;
+  DummyMeta.gid = 0;
+  DummyMeta.link = 0;
+  DummyMeta.mode = TSK_FS_META_MODE_ENUM(0);
+  DummyMeta.mtime = 0;
+  DummyMeta.mtime_nano = 0;
+  DummyMeta.name2 = 0;
+  DummyMeta.nlink = 0;
+  DummyMeta.seq = 0;
+  DummyMeta.size = 0; // need to reset this.
+  DummyMeta.time2.ext2.dtime = 0;
+  DummyMeta.time2.ext2.dtime_nano = 0;
+  DummyMeta.type = TSK_FS_META_TYPE_VIRT;
+  DummyMeta.uid = 0;  
+}
+
+TSK_FILTER_ENUM MetadataWriter::filterVol(const TSK_VS_PART_INFO* vs_part) {
+  if ((VolMode | vs_part->flags) && ((VolMode & TSK_VS_PART_FLAG_META) || (0 == (vs_part->flags & TSK_VS_PART_FLAG_META)))) {
+    CurDir = "";
+    CurDirIndex = vs_part->table_num;
+
+    TSK_FS_INFO fs; // we'll make image & volume system look like an fs, sort of
+    const TSK_VS_INFO* vs = vs_part->vs;
+    fs.block_count = (vs->img_info->size / vs->block_size);
+    fs.block_post_size = fs.block_pre_size = 0;
+    fs.block_size = fs.dev_bsize = vs->block_size;
+    fs.duname = "sector";
+    fs.endian = vs->endian;
+    fs.first_block = 0;
+    fs.first_inum = 0;
+    fs.flags = TSK_FS_INFO_FLAG_NONE;
+    fs.fs_id_used = 0;
+    fs.ftype = TSK_FS_TYPE_UNSUPP;
+    fs.img_info = vs->img_info;
+    fs.inum_count = 1;
+    fs.journ_inum = 0;
+    fs.last_block = fs.last_block_act = fs.block_count - 1;
+    fs.last_inum = 0;
+    fs.list_inum_named = 0;
+    fs.offset = 0;
+    fs.orphan_dir = 0;
+    fs.root_inum = 0;
+    setFsInfoStr(&fs);
+
+    DummyFile.fs_info = &fs;
+
+    DummyAttrRun.addr = vs_part->start;
+    DummyAttrRun.len = vs_part->len;
+    DummyMeta.size = DummyAttr.size = DummyAttrRun.len * fs.block_size;
+    std::stringstream buf;
+    buf << "partition-" << vs_part->addr;
+
+    std::string name(buf.str());
+    // std::cerr << "name = " << name << std::endl;
+    DummyName.name = DummyName.shrt_name = const_cast<char*>(name.c_str());
+    DummyName.name_size = DummyName.shrt_name_size = std::strlen(DummyName.name);
+
+//    std::cerr << "processing " << CurDir << name << std::endl;
+    processUnallocatedFile(&DummyFile, DummyAttr.size);
+//    std::cerr << "done processing" << std::endl;
+  }
+  return TSK_FILTER_CONT;
+}
 
 TSK_FILTER_ENUM MetadataWriter::filterFs(TSK_FS_INFO *fs) {
+  setFsInfoStr(fs);
   std::string fsID(bytesAsString(fs->fs_id, &fs->fs_id[fs->fs_id_used]));
   std::stringstream buf;
   buf << j(std::string("fs")) << ":{"
@@ -196,6 +302,17 @@ void MetadataWriter::startUnallocated() {
     InUnallocated = true;
     start();
   }
+}
+
+void MetadataWriter::setFsInfoStr(TSK_FS_INFO* fs) {
+  std::string fsID(bytesAsString(fs->fs_id, &fs->fs_id[fs->fs_id_used]));
+  std::stringstream buf;
+  buf << j(std::string("fs")) << ":{"
+      << j("byteOffset", fs->offset, true)
+      << j("blockSize", fs->block_size)
+      << j("fsID", fsID)
+      << "}";
+  FsInfo = buf.str();
 }
 
 void MetadataWriter::setCurDir(const char* path) {
@@ -258,7 +375,7 @@ void writeMetaRecord(std::ostream& out, const TSK_FS_META* i, const TSK_FS_INFO*
       << "}";
 }
 
-void writeNameRecord(std::ostream& out, const TSK_FS_NAME* n, unsigned int dirIndex) {
+void writeDummyNameord(std::ostream& out, const TSK_FS_NAME* n, unsigned int dirIndex) {
   out << "{"
       << j("flags", n->flags, true)
       << j("meta_addr", n->meta_addr)
@@ -284,7 +401,7 @@ void MetadataWriter::writeFile(std::ostream& out, const TSK_FS_FILE* file, uint6
   if (file->name) {
     TSK_FS_NAME* n = file->name;
     out << ", \"name\":";
-    writeNameRecord(out, n, CurDirIndex);
+    writeDummyNameord(out, n, CurDirIndex);
   }
 
   out << ", \"attrs\":[";
@@ -385,68 +502,7 @@ void MetadataWriter::flushUnallocated() {
   CurDir = "$Unallocated/";
   CurDirIndex = 0;
 
-  TSK_FS_NAME nameRec;
-  TSK_FS_META metaRec;
-  TSK_FS_FILE fileRec;
-
-  fileRec.name = &nameRec;
-  fileRec.meta = &metaRec;
-  fileRec.fs_info = Fs;
-
-  nameRec.flags = TSK_FS_NAME_FLAG_UNALLOC;
-  nameRec.meta_addr = 0;
-  nameRec.meta_seq = 0;
-  nameRec.type = TSK_FS_NAME_TYPE_VIRT;
-
-  TSK_FS_ATTR_RUN run;
-  run.flags = TSK_FS_ATTR_RUN_FLAG_NONE;
-  run.next = 0;
-  run.offset = 0;
-
-  TSK_FS_ATTR     attr;
-  attr.flags = TSK_FS_ATTR_NONRES;
-  attr.fs_file = &fileRec;
-  attr.id = 0;
-  attr.name = 0;
-  attr.name_size = 0;
-  attr.next = 0;
-  attr.nrd.compsize = 0;
-  attr.nrd.run = &run;
-  attr.nrd.run_end = &run;
-  attr.nrd.skiplen = 0;
-  attr.rd.buf = 0;
-  attr.rd.buf_size = 0;
-  attr.rd.offset = 0;
-  attr.type = TSK_FS_ATTR_TYPE_ENUM(128);
-
-  TSK_FS_ATTRLIST attrList;
-  attrList.head = &attr;
-
-  metaRec.addr = 0;
-  metaRec.atime = 0;
-  metaRec.atime_nano = 0;
-  metaRec.attr = &attrList;
-  metaRec.attr_state = TSK_FS_META_ATTR_STUDIED;
-  metaRec.content_len = 0; // ???
-  metaRec.content_ptr = 0;
-  metaRec.crtime = 0;
-  metaRec.crtime_nano = 0;
-  metaRec.ctime = 0;
-  metaRec.ctime_nano = 0;
-  metaRec.flags = TSK_FS_META_FLAG_UNALLOC;
-  metaRec.gid = 0;
-  metaRec.link = 0;
-  metaRec.mode = TSK_FS_META_MODE_ENUM(0);
-  metaRec.mtime = 0;
-  metaRec.mtime_nano = 0;
-  metaRec.name2 = 0;
-  metaRec.nlink = 0;
-  metaRec.seq = 0;
-  metaRec.size = 0; // need to reset this.
-  metaRec.time2.ext2.dtime = 0;
-  metaRec.time2.ext2.dtime_nano = 0;
-  metaRec.type = TSK_FS_META_TYPE_VIRT;
-  metaRec.uid = 0;
+  DummyFile.fs_info = Fs;
 
   const unsigned int fieldWidth = std::log10(Fs->block_count) + 1;
   std::string  name;
@@ -466,37 +522,37 @@ void MetadataWriter::flushUnallocated() {
     // std::cerr << "run [" << unallocated.lower() << ", " << unallocated.upper() << ")" << std::endl;
 
     if (FRAGMENT == UCMode) {
-      run.addr = unallocated.lower();
-      run.len = unallocated.upper() - run.addr;
-      metaRec.size = attr.size = run.len * Fs->block_size;
+      DummyAttrRun.addr = unallocated.lower();
+      DummyAttrRun.len = unallocated.upper() - DummyAttrRun.addr;
+      DummyMeta.size = DummyAttr.size = DummyAttrRun.len * Fs->block_size;
       std::stringstream buf;
       buf << std::setw(fieldWidth) << std::setfill('0')
-        << run.addr << "-" << run.len;
+        << DummyAttrRun.addr << "-" << DummyAttrRun.len;
       name = buf.str();
       // std::cerr << "name = " << name << std::endl;
-      nameRec.name = nameRec.shrt_name = const_cast<char*>(name.c_str());
-      nameRec.name_size = nameRec.shrt_name_size = std::strlen(nameRec.name);
+      DummyName.name = DummyName.shrt_name = const_cast<char*>(name.c_str());
+      DummyName.name_size = DummyName.shrt_name_size = std::strlen(DummyName.name);
 
   //    std::cerr << "processing " << CurDir << name << std::endl;
-      processUnallocatedFile(&fileRec, attr.size);
+      processUnallocatedFile(&DummyFile, DummyAttr.size);
   //    std::cerr << "done processing" << std::endl;
 
       ++CurDirIndex;
     }
     else if (BLOCK == UCMode) {
-      run.len = 1;
-      metaRec.size = attr.size = Fs->block_size;
+      DummyAttrRun.len = 1;
+      DummyMeta.size = DummyAttr.size = Fs->block_size;
       for (auto cur = unallocated.lower(); cur < unallocated.upper(); ++cur) {
-        run.addr = cur;
+        DummyAttrRun.addr = cur;
         std::stringstream buf;
-        buf << std::setw(fieldWidth) << std::setfill('0') << run.addr;
+        buf << std::setw(fieldWidth) << std::setfill('0') << DummyAttrRun.addr;
         name = buf.str();
         // std::cerr << "name = " << name << std::endl;
-        nameRec.name = nameRec.shrt_name = const_cast<char*>(name.c_str());
-        nameRec.name_size = nameRec.shrt_name_size = std::strlen(nameRec.name);
+        DummyName.name = DummyName.shrt_name = const_cast<char*>(name.c_str());
+        DummyName.name_size = DummyName.shrt_name_size = std::strlen(DummyName.name);
 
     //    std::cerr << "processing " << CurDir << name << std::endl;
-        processUnallocatedFile(&fileRec, attr.size);
+        processUnallocatedFile(&DummyFile, DummyAttr.size);
     //    std::cerr << "done processing" << std::endl;
 
         ++CurDirIndex;
