@@ -258,7 +258,7 @@ TSK_FILTER_ENUM MetadataWriter::filterVol(const TSK_VS_PART_INFO* vs_part) {
 
     DummyAttrRun.addr = vs_part->start;
     DummyAttrRun.len = vs_part->len;
-    DummyMeta.size = DummyAttr.nrd.allocsize = DummyAttrRun.len * fs.block_size;
+    DummyMeta.size = DummyAttr.size = DummyAttr.nrd.allocsize = DummyAttrRun.len * fs.block_size;
     std::stringstream buf;
     buf << "partition-" << vs_part->addr;
 
@@ -524,7 +524,7 @@ void MetadataWriter::flushUnallocated() {
     if (FRAGMENT == UCMode) {
       DummyAttrRun.addr = unallocated.lower();
       DummyAttrRun.len = unallocated.upper() - DummyAttrRun.addr;
-      DummyMeta.size = DummyAttr.nrd.allocsize = DummyAttrRun.len * Fs->block_size;
+      DummyMeta.size = DummyAttr.size = DummyAttr.nrd.allocsize = DummyAttrRun.len * Fs->block_size;
       std::stringstream buf;
       buf << std::setw(fieldWidth) << std::setfill('0')
         << DummyAttrRun.addr << "-" << DummyAttrRun.len;
@@ -541,7 +541,7 @@ void MetadataWriter::flushUnallocated() {
     }
     else if (BLOCK == UCMode) {
       DummyAttrRun.len = 1;
-      DummyMeta.size = DummyAttr.nrd.allocsize = DummyAttrRun.len * Fs->block_size;
+      DummyMeta.size = DummyAttr.size = DummyAttr.nrd.allocsize = DummyAttrRun.len * Fs->block_size;
       for (auto cur = unallocated.lower(); cur < unallocated.upper(); ++cur) {
         DummyAttrRun.addr = cur;
         std::stringstream buf;
