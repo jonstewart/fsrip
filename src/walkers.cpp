@@ -406,11 +406,15 @@ void MetadataWriter::writeFile(std::ostream& out, const TSK_FS_FILE* file, uint6
 
   out << ", \"attrs\":[";
   if (file->meta && (file->meta->attr_state & TSK_FS_META_ATTR_STUDIED) && file->meta->attr) {
+    const TSK_FS_ATTR* lastAttr = 0;
     for (const TSK_FS_ATTR* a = file->meta->attr->head; a; a = a->next) {
-      if (a != file->meta->attr->head) {
-        out << ", ";
+      if (a->flags & TSK_FS_ATTR_INUSE) {
+        if (lastAttr != 0) {
+          out << ", ";
+        }
+        writeAttr(out, a, file->meta->flags & TSK_FS_META_FLAG_ALLOC);
+        lastAttr = a;
       }
-      writeAttr(out, a, file->meta->flags & TSK_FS_META_FLAG_ALLOC);
     }
   }
   else {
