@@ -392,11 +392,10 @@ void MetadataWriter::writeFile(std::ostream& out, const TSK_FS_FILE* file, uint6
       << j("path", CurDir)
       << j("physicalSize", physicalSize);
 
-  if (file->meta) {
-    // need to come back for name2 and attrlist      
-    TSK_FS_META* i = file->meta;
+  TSK_FS_META* m = file->meta;
+  if (m && (m->flags & TSK_FS_META_FLAG_USED)) {
     out << ", \"meta\":";
-    writeMetaRecord(out, i, file->fs_info);
+    writeMetaRecord(out, m, file->fs_info);
   }
   if (file->name) {
     TSK_FS_NAME* n = file->name;
