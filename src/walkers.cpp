@@ -167,7 +167,7 @@ ssize_t physicalSize(const TSK_FS_FILE* file) {
 }
 
 MetadataWriter::MetadataWriter(std::ostream& out):
-  FileCounter(out), Fs(0), PhysicalSize(-1), DataWritten(0), InUnallocated(false), UCMode(NONE), CurDirIndex(0)
+  FileCounter(out), Fs(0), PhysicalSize(-1), DataWritten(0), InUnallocated(false), UCMode(NONE)
 {
   DummyFile.name = &DummyName;
   DummyFile.meta = &DummyMeta;
@@ -228,8 +228,8 @@ MetadataWriter::MetadataWriter(std::ostream& out):
 
 TSK_FILTER_ENUM MetadataWriter::filterVol(const TSK_VS_PART_INFO* vs_part) {
   if ((VolMode | vs_part->flags) && ((VolMode & TSK_VS_PART_FLAG_META) || (0 == (vs_part->flags & TSK_VS_PART_FLAG_META)))) {
-    CurDir = "";
-    CurDirIndex = vs_part->table_num;
+    DirCounts.clear();
+    DirCounts.push_back(std::make_pair("", vs_part->table_num));
 
     TSK_FS_INFO fs; // we'll make image & volume system look like an fs, sort of
     const TSK_VS_INFO* vs = vs_part->vs;
@@ -316,10 +316,20 @@ void MetadataWriter::setFsInfoStr(TSK_FS_INFO* fs) {
 }
 
 void MetadataWriter::setCurDir(const char* path) {
-  ++CurDirIndex;
-  if (0 != CurDir.compare(path)) {
-    CurDirIndex = 0;
-    CurDir.assign(path);
+  std::string p(path);
+  auto rItr(DirCounts.rbegin());
+  while (rItr != DirCounts.rend()) {
+    if (rItr->first == p) {
+      break;
+    }
+    ++rItr;
+  }
+  if (rItr == DirCounts.rend()) {
+    DirCounts.push_back(std::make_pair(p, 0));
+  }
+  else {
+    DirCounts.resize(rItr.base() - DirCounts.begin()); // === erase(rItr.base(), DirCounts.end())
+    ++DirCounts.back().second;
   }
 }
 
@@ -389,7 +399,7 @@ void writeDummyNameord(std::ostream& out, const TSK_FS_NAME* n, unsigned int dir
 
 void MetadataWriter::writeFile(std::ostream& out, const TSK_FS_FILE* file, uint64 physicalSize) {
   out << "{" << FsInfo
-      << j("path", CurDir)
+      << j("path", DirCounts.back().first)
       << j("physicalSize", physicalSize);
 
   TSK_FS_META* m = file->meta;
@@ -400,7 +410,7 @@ void MetadataWriter::writeFile(std::ostream& out, const TSK_FS_FILE* file, uint6
   if (file->name) {
     TSK_FS_NAME* n = file->name;
     out << ", \"name\":";
-    writeDummyNameord(out, n, CurDirIndex);
+    writeDummyNameord(out, n, DirCounts.back().second);
   }
 
   out << ", \"attrs\":[";
@@ -495,15 +505,15 @@ void MetadataWriter::processUnallocatedFile(TSK_FS_FILE* file, uint64 physicalSi
   const std::string output(buf.str());
   Out << output << '\n';
   DataWritten += output.size();
-  FileCounter::processFile(file, CurDir.c_str());
+  FileCounter::processFile(file, DirCounts.back().first.c_str());
 }
 
 void MetadataWriter::flushUnallocated() {
   if (!Fs || UCMode == NONE) {
     return;
   }
-  CurDir = "$Unallocated/";
-  CurDirIndex = 0;
+  DirCounts.clear();
+  DirCounts.push_back(std::make_pair("$Unallocated/", 0));
 
   DummyFile.fs_info = Fs;
 
@@ -540,7 +550,7 @@ void MetadataWriter::flushUnallocated() {
       processUnallocatedFile(&DummyFile, DummyAttr.size);
   //    std::cerr << "done processing" << std::endl;
 
-      ++CurDirIndex;
+      ++DirCounts.back().second;
     }
     else if (BLOCK == UCMode) {
       DummyAttrRun.len = 1;
@@ -558,7 +568,7 @@ void MetadataWriter::flushUnallocated() {
         processUnallocatedFile(&DummyFile, DummyAttr.size);
     //    std::cerr << "done processing" << std::endl;
 
-        ++CurDirIndex;
+        ++DirCounts.back().second;
       }
     }
   }
@@ -617,7 +627,7 @@ TSK_RETVAL_ENUM FileWriter::processFile(TSK_FS_FILE* file, const char* path) {
 }
 
 void FileWriter::processUnallocatedFile(TSK_FS_FILE* file, uint64 physicalSize) {
-  std::string fp(CurDir);
+  std::string fp(DirCounts.back().first);
   fp += std::string(file->name->name);
   // std::cerr << "processing " << fp << std::endl;
 

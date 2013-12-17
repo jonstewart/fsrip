@@ -103,8 +103,6 @@ protected:
   ssize_t     PhysicalSize,
               DataWritten;
 
-  std::string CurDir;
-
   bool        InUnallocated;
 
   UNALLOCATED_HANDLING UCMode;
@@ -130,10 +128,10 @@ protected:
   TSK_FS_ATTR       DummyAttr;
   TSK_FS_ATTR_RUN   DummyAttrRun;
 
+  std::vector<std::pair<std::string, unsigned int>> DirCounts;
+
 private:
   std::string  FsInfo;
-
-  unsigned int CurDirIndex;
 };
 
 class FileWriter: public MetadataWriter {
