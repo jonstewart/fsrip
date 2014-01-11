@@ -227,7 +227,10 @@ MetadataWriter::MetadataWriter(std::ostream& out):
 }
 
 TSK_FILTER_ENUM MetadataWriter::filterVol(const TSK_VS_PART_INFO* vs_part) {
-  if ((VolMode | vs_part->flags) && ((VolMode & TSK_VS_PART_FLAG_META) || (0 == (vs_part->flags & TSK_VS_PART_FLAG_META)))) {
+  if (!InUnallocated &&
+     (VolMode & vs_part->flags) &&
+     ((VolMode & TSK_VS_PART_FLAG_META) || (0 == (vs_part->flags & TSK_VS_PART_FLAG_META))))
+  {
     DirCounts.clear();
     DirCounts.push_back(std::make_pair("", vs_part->addr));
 
