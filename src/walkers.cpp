@@ -229,7 +229,7 @@ MetadataWriter::MetadataWriter(std::ostream& out):
 TSK_FILTER_ENUM MetadataWriter::filterVol(const TSK_VS_PART_INFO* vs_part) {
   if ((VolMode | vs_part->flags) && ((VolMode & TSK_VS_PART_FLAG_META) || (0 == (vs_part->flags & TSK_VS_PART_FLAG_META)))) {
     DirCounts.clear();
-    DirCounts.push_back(std::make_pair("", vs_part->table_num));
+    DirCounts.push_back(std::make_pair("", vs_part->addr));
 
     TSK_FS_INFO fs; // we'll make image & volume system look like an fs, sort of
     const TSK_VS_INFO* vs = vs_part->vs;
