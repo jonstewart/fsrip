@@ -263,7 +263,12 @@ TSK_FILTER_ENUM MetadataWriter::filterVol(const TSK_VS_PART_INFO* vs_part) {
     DummyAttrRun.len = vs_part->len;
     DummyMeta.size = DummyAttr.size = DummyAttr.nrd.allocsize = DummyAttrRun.len * fs.block_size;
     std::stringstream buf;
-    buf << "partition-" << vs_part->addr;
+    if (vs_part->flags & TSK_VS_PART_FLAG_ALLOC) {
+      buf << "part-" << (int)vs_part->table_num << "-" << (int)vs_part->slot_num;
+    }
+    else {
+      buf << "unused@" << vs_part->start;
+    }
 
     std::string name(buf.str());
     // std::cerr << "name = " << name << std::endl;
