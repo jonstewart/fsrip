@@ -330,7 +330,9 @@ void MetadataWriter::setFsInfoStr(TSK_FS_INFO* fs) {
 
 void MetadataWriter::setCurDir(const char* path) {
   std::string p(PartitionName);
-  p += "/";
+  if (!p.empty()) {
+    p += "/";
+  }
   p += path;
   auto rItr(DirCounts.rbegin());
   while (rItr != DirCounts.rend()) {
