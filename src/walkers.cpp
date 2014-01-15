@@ -226,7 +226,20 @@ MetadataWriter::MetadataWriter(std::ostream& out):
   DummyMeta.uid = 0;  
 }
 
+std::string getPartName(const TSK_VS_PART_INFO* vs_part) {
+  std::stringstream buf;
+  if (vs_part->flags & TSK_VS_PART_FLAG_ALLOC) {
+    buf << "part-" << (int)vs_part->table_num << "-" << (int)vs_part->slot_num;
+  }
+  else {
+    buf << "unused@" << vs_part->start;
+  }
+  return buf.str();
+}
+
 TSK_FILTER_ENUM MetadataWriter::filterVol(const TSK_VS_PART_INFO* vs_part) {
+  PartitionName = getPartName(vs_part);
+
   if (!InUnallocated &&
      (VolMode & vs_part->flags) &&
      ((VolMode & TSK_VS_PART_FLAG_META) || (0 == (vs_part->flags & TSK_VS_PART_FLAG_META))))
@@ -262,18 +275,10 @@ TSK_FILTER_ENUM MetadataWriter::filterVol(const TSK_VS_PART_INFO* vs_part) {
     DummyAttrRun.addr = vs_part->start;
     DummyAttrRun.len = vs_part->len;
     DummyMeta.size = DummyAttr.size = DummyAttr.nrd.allocsize = DummyAttrRun.len * fs.block_size;
-    std::stringstream buf;
-    if (vs_part->flags & TSK_VS_PART_FLAG_ALLOC) {
-      buf << "part-" << (int)vs_part->table_num << "-" << (int)vs_part->slot_num;
-    }
-    else {
-      buf << "unused@" << vs_part->start;
-    }
 
-    std::string name(buf.str());
     // std::cerr << "name = " << name << std::endl;
-    DummyName.name = DummyName.shrt_name = const_cast<char*>(name.c_str());
-    DummyName.name_size = DummyName.shrt_name_size = std::strlen(DummyName.name);
+    DummyName.name = DummyName.shrt_name = const_cast<char*>(PartitionName.c_str());
+    DummyName.name_size = DummyName.shrt_name_size = PartitionName.size();
 
 //    std::cerr << "processing " << CurDir << name << std::endl;
     processUnallocatedFile(&DummyFile, DummyAttr.size);
@@ -324,7 +329,9 @@ void MetadataWriter::setFsInfoStr(TSK_FS_INFO* fs) {
 }
 
 void MetadataWriter::setCurDir(const char* path) {
-  std::string p(path);
+  std::string p(PartitionName);
+  p += "/";
+  p += path;
   auto rItr(DirCounts.rbegin());
   while (rItr != DirCounts.rend()) {
     if (rItr->first == p) {
@@ -393,7 +400,7 @@ void writeMetaRecord(std::ostream& out, const TSK_FS_META* i, const TSK_FS_INFO*
       << "}";
 }
 
-void writeDummyNameord(std::ostream& out, const TSK_FS_NAME* n, unsigned int dirIndex) {
+void writeDummyNameRecord(std::ostream& out, const TSK_FS_NAME* n, unsigned int dirIndex) {
   out << "{"
       << j("flags", n->flags, true)
       << j("meta_addr", n->meta_addr)
@@ -418,7 +425,7 @@ void MetadataWriter::writeFile(std::ostream& out, const TSK_FS_FILE* file, uint6
   if (file->name) {
     TSK_FS_NAME* n = file->name;
     out << ", \"name\":";
-    writeDummyNameord(out, n, DirCounts.back().second);
+    writeDummyNameRecord(out, n, DirCounts.back().second);
   }
 
   out << ", \"attrs\":[";
@@ -520,8 +527,7 @@ void MetadataWriter::flushUnallocated() {
   if (!Fs || UCMode == NONE) {
     return;
   }
-  DirCounts.clear();
-  DirCounts.push_back(std::make_pair("$Unallocated/", 0));
+  setCurDir("$Unallocated/");
 
   DummyFile.fs_info = Fs;
 

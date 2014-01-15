@@ -100,6 +100,8 @@ public:
 protected:
   TSK_FS_INFO* Fs;
 
+  std::string PartitionName;
+
   ssize_t     PhysicalSize,
               DataWritten;
 
