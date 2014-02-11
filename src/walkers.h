@@ -133,7 +133,8 @@ protected:
   std::vector<std::pair<std::string, unsigned int>> DirCounts;
 
 private:
-  std::string  FsInfo;
+  std::string  FsInfo,
+               FsID;
 };
 
 class FileWriter: public MetadataWriter {

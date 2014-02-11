@@ -289,14 +289,6 @@ TSK_FILTER_ENUM MetadataWriter::filterVol(const TSK_VS_PART_INFO* vs_part) {
 
 TSK_FILTER_ENUM MetadataWriter::filterFs(TSK_FS_INFO *fs) {
   setFsInfoStr(fs);
-  std::string fsID(bytesAsString(fs->fs_id, &fs->fs_id[fs->fs_id_used]));
-  std::stringstream buf;
-  buf << j(std::string("fs")) << ":{"
-      << j("byteOffset", fs->offset, true)
-      << j("blockSize", fs->block_size)
-      << j("fsID", fsID)
-      << "}";
-  FsInfo = buf.str();
   Fs = fs;
 
   if (InUnallocated) {
@@ -304,8 +296,8 @@ TSK_FILTER_ENUM MetadataWriter::filterFs(TSK_FS_INFO *fs) {
     return TSK_FILTER_SKIP;
   }
   else {
-    UnallocatedRuns[fsID] += boost::icl::discrete_interval<uint64>::right_open(0, fs->block_count);
-    CurUnallocatedItr = UnallocatedRuns.find(fsID);
+    UnallocatedRuns[FsID] += boost::icl::discrete_interval<uint64>::right_open(0, fs->block_count);
+    CurUnallocatedItr = UnallocatedRuns.find(FsID);
     return TSK_FILTER_CONT;
   }
 }
@@ -318,22 +310,19 @@ void MetadataWriter::startUnallocated() {
 }
 
 void MetadataWriter::setFsInfoStr(TSK_FS_INFO* fs) {
-  std::string fsID(bytesAsString(fs->fs_id, &fs->fs_id[fs->fs_id_used]));
+  FsID = bytesAsString(fs->fs_id, &fs->fs_id[fs->fs_id_used]);
   std::stringstream buf;
   buf << j(std::string("fs")) << ":{"
       << j("byteOffset", fs->offset, true)
       << j("blockSize", fs->block_size)
-      << j("fsID", fsID)
+      << j("fsID", FsID)
+      << j("partName", PartitionName)
       << "}";
   FsInfo = buf.str();
 }
 
 void MetadataWriter::setCurDir(const char* path) {
-  std::string p(PartitionName);
-  if (!p.empty()) {
-    p += "/";
-  }
-  p += path;
+  std::string p(path);
   auto rItr(DirCounts.rbegin());
   while (rItr != DirCounts.rend()) {
     if (rItr->first == p) {
