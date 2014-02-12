@@ -238,7 +238,9 @@ std::string getPartName(const TSK_VS_PART_INFO* vs_part) {
 }
 
 TSK_FILTER_ENUM MetadataWriter::filterVol(const TSK_VS_PART_INFO* vs_part) {
-  PartitionName = getPartName(vs_part);
+  PartitionName.clear();
+
+  std::string partName(getPartName(vs_part));
 
   if (!InUnallocated &&
      (VolMode & vs_part->flags) &&
@@ -248,6 +250,7 @@ TSK_FILTER_ENUM MetadataWriter::filterVol(const TSK_VS_PART_INFO* vs_part) {
     DirCounts.push_back(std::make_pair("", vs_part->addr));
 
     TSK_FS_INFO fs; // we'll make image & volume system look like an fs, sort of
+                    // fs.partName will be empty, since we're not _in_ a partition
     const TSK_VS_INFO* vs = vs_part->vs;
     fs.block_count = (vs->img_info->size / vs->block_size);
     fs.block_post_size = fs.block_pre_size = 0;
@@ -277,13 +280,14 @@ TSK_FILTER_ENUM MetadataWriter::filterVol(const TSK_VS_PART_INFO* vs_part) {
     DummyMeta.size = DummyAttr.size = DummyAttr.nrd.allocsize = DummyAttrRun.len * fs.block_size;
 
     // std::cerr << "name = " << name << std::endl;
-    DummyName.name = DummyName.shrt_name = const_cast<char*>(PartitionName.c_str());
-    DummyName.name_size = DummyName.shrt_name_size = PartitionName.size();
+    DummyName.name = DummyName.shrt_name = const_cast<char*>(partName.c_str());
+    DummyName.name_size = DummyName.shrt_name_size = partName.size();
 
 //    std::cerr << "processing " << CurDir << name << std::endl;
     processUnallocatedFile(&DummyFile, DummyAttr.size);
 //    std::cerr << "done processing" << std::endl;
   }
+  PartitionName = partName;
   return TSK_FILTER_CONT;
 }
 
