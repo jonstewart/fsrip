@@ -9,7 +9,7 @@ Copyright (c) 2010 Lightbox Technologies, Inc.
 #include <iomanip>
 #include <algorithm>
 #include <string>
-#include <iostream>
+#include <fstream>
 
 #include <boost/program_options.hpp>
 #include <boost/bind.hpp>
@@ -45,12 +45,6 @@ std::shared_ptr<LbtTskAuto> createVisitor(const std::string& cmd, std::ostream& 
   }
   else if (cmd == "dumpfs") {
     return std::shared_ptr<LbtTskAuto>(new MetadataWriter(out));
-  }
-  else if (cmd == "count") {
-    return std::shared_ptr<LbtTskAuto>(new FileCounter(out));
-  }
-  else if (cmd == "info") {
-    return std::shared_ptr<LbtTskAuto>(new ImageInfo(out, segments));
   }
   else if (cmd == "dumpfiles") {
     return std::shared_ptr<LbtTskAuto>(new FileWriter(out));
@@ -91,7 +85,8 @@ int main(int argc, char *argv[]) {
   posOpts.add("ev-files", -1);
   desc.add_options()
     ("help", "produce help message")
-    ("command", po::value< std::string >(), "command to perform [info|dumpimg|dumpfs|dumpfiles|count]")
+    ("command", po::value< std::string >(), "command to perform [dumpimg|dumpfs|dumpfiles]")
+    ("overview-file", po::value< std::string >(), "output disk overview information")
     ("unallocated", po::value< std::string >(&ucMode)->default_value("none"), "how to handle unallocated [none|fragment|block]")
     ("volume-entries", po::value< std::string >(&volMode)->default_value("none"), "output metadata entries for volumes [none|unallocated|allocated|metadata|all")
     ("ev-files", po::value< std::vector< std::string > >(), "evidence files");
@@ -118,6 +113,12 @@ int main(int argc, char *argv[]) {
         segments[i] = imgSegs[i].c_str();
       }
       if (0 == walker->openImageUtf8(imgSegs.size(), segments.get(), TSK_IMG_TYPE_DETECT, 0)) {
+        if (vm.count("overview-file")) {
+          std::ofstream file(vm["overview-file"].as<std::string>().c_str(), std::ios::out);
+          file << *(walker->getImage(imgSegs));
+          file.close();
+        }
+
         walker->setVolFilterFlags((TSK_VS_PART_FLAG_ENUM)(TSK_VS_PART_FLAG_ALLOC | TSK_VS_PART_FLAG_UNALLOC | TSK_VS_PART_FLAG_META));
         walker->setFileFilterFlags((TSK_FS_DIR_WALK_FLAG_ENUM)(TSK_FS_DIR_WALK_FLAG_RECURSE | TSK_FS_DIR_WALK_FLAG_UNALLOC | TSK_FS_DIR_WALK_FLAG_ALLOC));
         walker->setVolMetadataMode(makeVolMode(volMode));

@@ -47,9 +47,9 @@ conf = Configure(env)
 #optLibs = checkLibs(conf, ['afflib', 'libewf'])
 optLibs = ['libewf', 'z']
 
-ccflags = '-Wall -Wno-trigraphs -Wextra -O1 -g -std=c++11 -Wnon-virtual-dtor'
+ccflags = '-Wall -Wno-trigraphs -Wextra -O1 -g -std=c++11 -Wnon-virtual-dtor -Iinclude'
 
-ccflags += ''.join(' -isystem ' + d for d in filter(p.exists, ['vendors/boost']))
+ccflags += ''.join(' -isystem ' + d for d in filter(p.exists, ['vendors/boost', 'vendors/scope']))
 
 env.Replace(CCFLAGS=ccflags)
 
@@ -60,3 +60,8 @@ vars.Save('build_variables.py', env)
 Help(vars.GenerateHelpText(env))
 
 fsrip = sub('src')
+test = sub('test')
+
+env.Command('runTests', test, './$SOURCE')
+Depends('runTests', fsrip)
+Default('runTests')
