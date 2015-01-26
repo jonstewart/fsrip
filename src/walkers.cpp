@@ -62,7 +62,8 @@ DirInfo DirInfo::newChild(const std::string &path) {
   uint32_t childLvl = childLevel();
   DirInfo  ret;
   ret.Path = path;
-  ret.BareID = appendVarint(BareID, Count++);
+  ret.BareID = appendVarint(BareID, Count - 1);
+//  ret.BareID = appendVarint(BareID, Count);
   ret.Level = childLvl;
   return ret;
 }
@@ -73,7 +74,7 @@ std::string DirInfo::id() const {
   return ret;
 }
 
-std::string DirInfo::curChild() const {
+std::string DirInfo::lastChild() const {
   return makeFileID(childLevel(), BareID, Count - 1);
 }
 
@@ -395,11 +396,15 @@ void MetadataWriter::setCurDir(const char* path) {
 
   auto rItr = std::find_if(Dirs.rbegin(), Dirs.rend(), [&p](const DirInfo& d){ return d.path() == p; });
   if (rItr == Dirs.rend()) {
-    // couldn't find the dir on the stack, so push it on
+    // Couldn't find the dir on the stack, so push it on
+    // However, since TSK uses depth-first traversal, we'll have seen the entry for the directory immediately prior,
+    // so we _MUST NOT_ increment the count on Dirs.back(), because then we'd be double-counting.
+    std::cerr << "new directory " << p << std::endl;
     Dirs.emplace_back(Dirs.back().newChild(p));
   }
   else {
     // found it; pop off any children and inc the count
+    std::cerr << "old directory " << p << std::endl;
     Dirs.erase(rItr.base(), Dirs.end());
   }
   Dirs.back().incCount();
@@ -504,7 +509,7 @@ void MetadataWriter::writeNameRecord(std::ostream& out, const TSK_FS_NAME* n) {
 }
 
 void MetadataWriter::writeFile(std::ostream& out, const TSK_FS_FILE* file) {
-  std::string id(Dirs.back().curChild());
+  std::string id(Dirs.back().lastChild());
   out << "{" << j("id", id, true) << ", \"t\":{ \"fsmd\":{ ";
 
   out << FsInfo

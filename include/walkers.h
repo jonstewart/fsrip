@@ -29,7 +29,7 @@ public:
 
 
   DirInfo     newChild(const std::string& path); // increments Count and returns a DirInfo
-  std::string curChild() const;
+  std::string lastChild() const;
   uint32_t    childLevel() const;
   void        incCount();
 
