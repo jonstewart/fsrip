@@ -77,7 +77,9 @@ int makeVolMode(const std::string& mode) {
 
 int main(int argc, char *argv[]) {
   std::string ucMode,
-              volMode;
+              volMode,
+              inodeMapFile,
+              diskMapFile;
 
   po::options_description desc("Allowed Options");
   po::positional_options_description posOpts;
@@ -89,7 +91,9 @@ int main(int argc, char *argv[]) {
     ("overview-file", po::value< std::string >(), "output disk overview information")
     ("unallocated", po::value< std::string >(&ucMode)->default_value("none"), "how to handle unallocated [none|fragment|block]")
     ("volume-entries", po::value< std::string >(&volMode)->default_value("none"), "output metadata entries for volumes [none|unallocated|allocated|metadata|all")
-    ("ev-files", po::value< std::vector< std::string > >(), "evidence files");
+    ("ev-files", po::value< std::vector< std::string > >(), "evidence files")
+    ("inode-map-file", po::value<std::string>(&inodeMapFile)->default_value(""), "optional file to output containing directory entry to inode map")
+    ("disk-map-file", po::value<std::string>(&diskMapFile)->default_value(""), "optional file to output containing disk data to inode map");
 
   po::variables_map vm;
   try {
