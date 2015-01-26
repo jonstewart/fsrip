@@ -1,0 +1,164 @@
+#include <scope/test.h>
+
+#include <limits>
+#include <iostream>
+#include <iomanip>
+
+#include "util.h"
+
+SCOPE_TEST(testVarintEncode) {
+  unsigned char e[9];
+  SCOPE_ASSERT_EQUAL(1u, vintEncode(e, 0));
+  SCOPE_ASSERT_EQUAL(0u, e[0]);
+
+  SCOPE_ASSERT_EQUAL(1u, vintEncode(e, 1));
+  SCOPE_ASSERT_EQUAL(1u, e[0]);
+
+  SCOPE_ASSERT_EQUAL(1u, vintEncode(e, 240));
+  SCOPE_ASSERT_EQUAL(240u, e[0]);
+
+  SCOPE_ASSERT_EQUAL(2u, vintEncode(e, 241));
+  SCOPE_ASSERT_EQUAL(241u, e[0]);
+  SCOPE_ASSERT_EQUAL(1u, e[1]);
+
+  SCOPE_ASSERT_EQUAL(2u, vintEncode(e, 2287));
+  SCOPE_ASSERT_EQUAL(248u, e[0]);
+  SCOPE_ASSERT_EQUAL(255u, e[1]);
+
+  SCOPE_ASSERT_EQUAL(3u, vintEncode(e, 2288));
+  SCOPE_ASSERT_EQUAL(249u, e[0]);
+  SCOPE_ASSERT_EQUAL(0u, e[1]);
+  SCOPE_ASSERT_EQUAL(0, e[2]);
+
+  SCOPE_ASSERT_EQUAL(3u, vintEncode(e, 67823));
+  SCOPE_ASSERT_EQUAL(249u, e[0]);
+  SCOPE_ASSERT_EQUAL(255u, e[1]);
+  SCOPE_ASSERT_EQUAL(255u, e[2]);
+
+  SCOPE_ASSERT_EQUAL(4u, vintEncode(e, 67824));
+  SCOPE_ASSERT_EQUAL(250u, e[0]);
+  SCOPE_ASSERT_EQUAL(1u, e[1]);
+  SCOPE_ASSERT_EQUAL(8u, e[2]);
+  SCOPE_ASSERT_EQUAL(240u, e[3]);
+
+  SCOPE_ASSERT_EQUAL(4u, vintEncode(e, 16777215));
+  SCOPE_ASSERT_EQUAL(250u, e[0]);
+  SCOPE_ASSERT_EQUAL(255u, e[1]);
+  SCOPE_ASSERT_EQUAL(255u, e[2]);
+  SCOPE_ASSERT_EQUAL(255u, e[3]);
+
+  SCOPE_ASSERT_EQUAL(5u, vintEncode(e, 16777216));
+  SCOPE_ASSERT_EQUAL(251u, e[0]);
+  SCOPE_ASSERT_EQUAL(1u, e[1]);
+  SCOPE_ASSERT_EQUAL(0u, e[2]);
+  SCOPE_ASSERT_EQUAL(0u, e[3]);
+  SCOPE_ASSERT_EQUAL(0u, e[4]);
+
+  SCOPE_ASSERT_EQUAL(5u, vintEncode(e, 4294967295));
+  SCOPE_ASSERT_EQUAL(251u, e[0]);
+  SCOPE_ASSERT_EQUAL(255u, e[1]);
+  SCOPE_ASSERT_EQUAL(255u, e[2]);
+  SCOPE_ASSERT_EQUAL(255u, e[3]);
+  SCOPE_ASSERT_EQUAL(255u, e[4]);
+
+  SCOPE_ASSERT_EQUAL(6u, vintEncode(e, 4294967296));
+  SCOPE_ASSERT_EQUAL(252u, e[0]);
+  SCOPE_ASSERT_EQUAL(1u, e[1]);
+  SCOPE_ASSERT_EQUAL(0u, e[2]);
+  SCOPE_ASSERT_EQUAL(0u, e[3]);
+  SCOPE_ASSERT_EQUAL(0u, e[4]);
+  SCOPE_ASSERT_EQUAL(0u, e[5]);
+
+  SCOPE_ASSERT_EQUAL(6u, vintEncode(e, 1099511627775));
+  SCOPE_ASSERT_EQUAL(252u, e[0]);
+  SCOPE_ASSERT_EQUAL(255u, e[1]);
+  SCOPE_ASSERT_EQUAL(255u, e[2]);
+  SCOPE_ASSERT_EQUAL(255u, e[3]);
+  SCOPE_ASSERT_EQUAL(255u, e[4]);
+  SCOPE_ASSERT_EQUAL(255u, e[5]);
+
+  SCOPE_ASSERT_EQUAL(7u, vintEncode(e, 1099511627776));
+  SCOPE_ASSERT_EQUAL(253u, e[0]);
+  SCOPE_ASSERT_EQUAL(1u, e[1]);
+  SCOPE_ASSERT_EQUAL(0u, e[2]);
+  SCOPE_ASSERT_EQUAL(0u, e[3]);
+  SCOPE_ASSERT_EQUAL(0u, e[4]);
+  SCOPE_ASSERT_EQUAL(0u, e[5]);
+  SCOPE_ASSERT_EQUAL(0u, e[6]);
+
+  SCOPE_ASSERT_EQUAL(7u, vintEncode(e, 281474976710655));
+  SCOPE_ASSERT_EQUAL(253u, e[0]);
+  SCOPE_ASSERT_EQUAL(255u, e[1]);
+  SCOPE_ASSERT_EQUAL(255u, e[2]);
+  SCOPE_ASSERT_EQUAL(255u, e[3]);
+  SCOPE_ASSERT_EQUAL(255u, e[4]);
+  SCOPE_ASSERT_EQUAL(255u, e[5]);
+  SCOPE_ASSERT_EQUAL(255u, e[6]);
+
+  SCOPE_ASSERT_EQUAL(8u, vintEncode(e, 281474976710656));
+  SCOPE_ASSERT_EQUAL(254u, e[0]);
+  SCOPE_ASSERT_EQUAL(1u, e[1]);
+  SCOPE_ASSERT_EQUAL(0u, e[2]);
+  SCOPE_ASSERT_EQUAL(0u, e[3]);
+  SCOPE_ASSERT_EQUAL(0u, e[4]);
+  SCOPE_ASSERT_EQUAL(0u, e[5]);
+  SCOPE_ASSERT_EQUAL(0u, e[6]);
+  SCOPE_ASSERT_EQUAL(0u, e[7]);
+
+  SCOPE_ASSERT_EQUAL(8u, vintEncode(e, 72057594037927935));
+  SCOPE_ASSERT_EQUAL(254u, e[0]);
+  SCOPE_ASSERT_EQUAL(255u, e[1]);
+  SCOPE_ASSERT_EQUAL(255u, e[2]);
+  SCOPE_ASSERT_EQUAL(255u, e[3]);
+  SCOPE_ASSERT_EQUAL(255u, e[4]);
+  SCOPE_ASSERT_EQUAL(255u, e[5]);
+  SCOPE_ASSERT_EQUAL(255u, e[6]);
+  SCOPE_ASSERT_EQUAL(255u, e[7]);
+
+  SCOPE_ASSERT_EQUAL(9u, vintEncode(e, 72057594037927936));
+  SCOPE_ASSERT_EQUAL(255u, e[0]);
+  SCOPE_ASSERT_EQUAL(1u, e[1]);
+  SCOPE_ASSERT_EQUAL(0u, e[2]);
+  SCOPE_ASSERT_EQUAL(0u, e[3]);
+  SCOPE_ASSERT_EQUAL(0u, e[4]);
+  SCOPE_ASSERT_EQUAL(0u, e[5]);
+  SCOPE_ASSERT_EQUAL(0u, e[6]);
+  SCOPE_ASSERT_EQUAL(0u, e[7]);
+  SCOPE_ASSERT_EQUAL(0u, e[8]);
+
+  SCOPE_ASSERT_EQUAL(9u, vintEncode(e, std::numeric_limits<uint64_t>::max()));
+  SCOPE_ASSERT_EQUAL(255u, e[0]);
+  SCOPE_ASSERT_EQUAL(255u, e[1]);
+  SCOPE_ASSERT_EQUAL(255u, e[2]);
+  SCOPE_ASSERT_EQUAL(255u, e[3]);
+  SCOPE_ASSERT_EQUAL(255u, e[4]);
+  SCOPE_ASSERT_EQUAL(255u, e[5]);
+  SCOPE_ASSERT_EQUAL(255u, e[6]);
+  SCOPE_ASSERT_EQUAL(255u, e[7]);
+  SCOPE_ASSERT_EQUAL(255u, e[8]);
+}
+
+SCOPE_TEST(testAFewVarints) {
+  unsigned char buf[9];
+  uint64_t i = 0;
+  uint64_t val = 0;
+  do {
+    i <<= 1;
+    ++i;
+    unsigned int encBytes = vintEncode(buf, i);
+    unsigned int decBytes = vintDecode(val, buf);
+    SCOPE_ASSERT_EQUAL(encBytes, decBytes);
+    SCOPE_ASSERT(encBytes <= 9);
+    SCOPE_ASSERT_EQUAL(i, val);
+  } while (i != std::numeric_limits<uint64_t>::max());
+}
+
+SCOPE_TEST(testNullDecode) {
+  uint64_t val = 17;
+  SCOPE_ASSERT_EQUAL(0, vintDecode(val, nullptr));
+  SCOPE_ASSERT_EQUAL(17, val);
+}
+
+SCOPE_TEST(testFormatTimestamp) {
+  SCOPE_ASSERT_EQUAL("1970-01-01T00:00:00.5Z", formatTimestamp(0, 500000000));
+}
