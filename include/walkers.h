@@ -103,7 +103,7 @@ protected:
 
 class MetadataWriter: public FileCounter {
 public:
-  typedef std::pair<TSK_DADDR_T, TSK_DADDR_T> extent;
+  typedef std::pair<TSK_DADDR_T, TSK_DADDR_T> Extent;
 
   MetadataWriter(std::ostream& out);
 
@@ -121,6 +121,8 @@ public:
   virtual void startUnallocated();
 
   virtual void finishWalk();
+
+  static bool makeUnallocatedDataRun(TSK_DADDR_T start, Extent next, TSK_FS_ATTR_RUN& datarun);
 
 protected:
   TSK_FS_INFO* Fs;
@@ -144,7 +146,7 @@ protected:
   void writeMetaRecord(std::ostream& out, const TSK_FS_FILE* file, const TSK_FS_INFO* fs);
   void writeAttr(std::ostream& out, TSK_INUM_T addr, const TSK_FS_ATTR* attr, const bool isAllocated);
 
-  void markAllocated(const extent& allocated, TSK_INUM_T addr);
+  void markAllocated(const Extent& allocated, TSK_INUM_T addr);
   void flushUnallocated();
 
   virtual void processUnallocatedFile(TSK_FS_FILE* file);

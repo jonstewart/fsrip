@@ -557,7 +557,7 @@ void MetadataWriter::writeAttr(std::ostream& out, TSK_INUM_T addr, const TSK_FS_
     out << ", \"nrd_runs\":[";
     for (TSK_FS_ATTR_RUN* curRun = a->nrd.run; curRun; curRun = curRun->next) {
       if (isAllocated) {
-        markAllocated(extent(curRun->addr, curRun->addr + curRun->len), addr);
+        markAllocated(Extent(curRun->addr, curRun->addr + curRun->len), addr);
       }
 
       if (curRun != a->nrd.run) {
@@ -575,7 +575,17 @@ void MetadataWriter::writeAttr(std::ostream& out, TSK_INUM_T addr, const TSK_FS_
   out << "}";
 }
 
-void MetadataWriter::markAllocated(const extent& allocated, TSK_INUM_T addr) {
+bool MetadataWriter::makeUnallocatedDataRun(TSK_DADDR_T start, Extent next, TSK_FS_ATTR_RUN& datarun) {
+  if (start < next.first && next.first <= next.second) {
+    datarun.addr = start;
+    datarun.len = next.first - start;
+    datarun.offset = 0;
+    return true;
+  }
+  return false;
+}
+
+void MetadataWriter::markAllocated(const Extent& allocated, TSK_INUM_T addr) {
   if (allocated.first < allocated.second && allocated.second <= Fs->block_count) {
     CurAllocatedItr->second += std::make_pair(
       boost::icl::discrete_interval<uint64_t>::right_open(allocated.first, allocated.second),
