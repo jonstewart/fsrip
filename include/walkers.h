@@ -133,7 +133,7 @@ protected:
 
   UNALLOCATED_HANDLING UCMode;
 
-  std::map< std::string, boost::icl::interval_map<uint64, std::set<std::string>> > AllocatedRuns; // FS ID->UC Fragments
+  std::map< std::string, boost::icl::interval_map<uint64_t, std::set<uint64_t>> > AllocatedRuns; // FS ID->interval->inodes
   decltype(AllocatedRuns.begin()) CurAllocatedItr;
 
   void setCurDir(const char* path);
@@ -142,9 +142,9 @@ protected:
   void writeFile(std::ostream& out, const TSK_FS_FILE* file);
   void writeNameRecord(std::ostream& out, const TSK_FS_NAME* n);
   void writeMetaRecord(std::ostream& out, const TSK_FS_FILE* file, const TSK_FS_INFO* fs);
-  void writeAttr(std::ostream& out, const TSK_FS_ATTR* attr, const bool isAllocated);
+  void writeAttr(std::ostream& out, TSK_INUM_T addr, const TSK_FS_ATTR* attr, const bool isAllocated);
 
-  void markAllocated(const extent& allocated, const std::string& name);
+  void markAllocated(const extent& allocated, TSK_INUM_T addr);
   void flushUnallocated();
 
   virtual void processUnallocatedFile(TSK_FS_FILE* file);
