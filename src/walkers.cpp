@@ -34,8 +34,8 @@ std::string bytesAsString(const unsigned char* idBeg, const unsigned char* idEnd
   buf.width(2);
   buf.fill('0');
   buf << std::hex;
-  for (const unsigned char* cur = idBeg; cur < idEnd; ++cur) {
-    buf << (unsigned int)*cur;
+  for (const unsigned char* cur = idBeg; cur != idEnd; ++cur) {
+    buf << static_cast<int>(*cur);
   }
   return buf.str();
 }
@@ -330,8 +330,6 @@ MetadataWriter::MetadataWriter(std::ostream& out):
 }
 
 uint8_t MetadataWriter::start() {
-  Dirs.clear();
-  Dirs.emplace_back(DirInfo());
   return LbtTskAuto::start();
 }
 
@@ -401,11 +399,17 @@ TSK_FILTER_ENUM MetadataWriter::filterVol(const TSK_VS_PART_INFO* vs_part) {
 }
 
 TSK_FILTER_ENUM MetadataWriter::filterFs(TSK_FS_INFO *fs) {
+  Dirs.clear();
+  Dirs.emplace_back(DirInfo());
+
   using namespace boost::icl;
   setFsInfoStr(fs);
   Fs = fs;
 
   if (InUnallocated) {
+    for (unsigned i = 0; i < NumRootEntries[FsID]; ++i) {
+      Dirs.back().incCount();
+    }
     flushUnallocated();
     return TSK_FILTER_SKIP;
   }
@@ -453,6 +457,9 @@ void MetadataWriter::setCurDir(const char* path) {
     Dirs.erase(rItr.base(), Dirs.end());
   }
   Dirs.back().incCount();
+  if (Dirs.size() == 1) {
+    NumRootEntries[FsID] = Dirs.back().count();
+  }
   std::cerr << "setCurDir(" << path << ") seen, id = " << Dirs.back().id() << ", Count = " << Dirs.back().count()
     << ", parentID = " << (++Dirs.rbegin() != Dirs.rend() ? (++Dirs.rbegin())->id(): "") << std::endl;
 }
@@ -485,7 +492,7 @@ void MetadataWriter::writeMetaRecord(std::ostream& out, const TSK_FS_FILE* file,
   const TSK_FS_META* i = file->meta;
 
   out << "{"
-      << j("addr", i->addr, true)
+      << j<int64_t>("addr", static_cast<int64_t>(i->addr), true)
       << j("accessed", formatTimestamp(i->atime, i->atime_nano))
       << j("content_len", i->content_len)
       << j("created", formatTimestamp(i->crtime, i->crtime_nano))
@@ -545,7 +552,7 @@ void MetadataWriter::writeMetaRecord(std::ostream& out, const TSK_FS_FILE* file,
 void MetadataWriter::writeNameRecord(std::ostream& out, const TSK_FS_NAME* n) {
   out << "{"
       << j("flags", nameFlags(n->flags), true)
-      << j("meta_addr", n->meta_addr)
+      << j<int64_t>("meta_addr", static_cast<int64_t>(n->meta_addr))
       << j("meta_seq", n->meta_seq)
       << j("name", (n->name && n->name_size ? std::string(n->name): ""))
       << j("shrt_name", (n->shrt_name && n->shrt_name_size ? std::string(n->shrt_name): ""))
@@ -651,21 +658,24 @@ void MetadataWriter::prepUnallocatedFile(unsigned int fieldWidth, unsigned int b
   nameRec.name_size = nameRec.shrt_name_size = name.size();
 
   meta.size = attr.size = attr.nrd.allocsize = run.len * blockSize;
+
+  nameRec.meta_addr = meta.addr = std::numeric_limits<uint64_t>::max() - ++NumUnallocated;
 }
 
 void MetadataWriter::processUnallocatedFragment(TSK_DADDR_T start, TSK_DADDR_T end, unsigned int fieldWidth, std::string& name) {
+  std::string path("$Unallocated/");
   if (makeUnallocatedDataRun(start, end, DummyAttrRun)) {
     if (BLOCK == UCMode) {
       for (TSK_DADDR_T cur(start); cur != end; ++cur) {
         makeUnallocatedDataRun(cur, cur + 1, DummyAttrRun);
         prepUnallocatedFile(fieldWidth, Fs->block_size, name, DummyAttrRun, DummyAttr, DummyMeta, DummyName);
-        processFile(&DummyFile, "$Unallocated/");
+        processFile(&DummyFile, path.c_str());
       }
     }
     else {
       makeUnallocatedDataRun(start, end, DummyAttrRun);
       prepUnallocatedFile(fieldWidth, Fs->block_size, name, DummyAttrRun, DummyAttr, DummyMeta, DummyName);
-      processFile(&DummyFile, "$Unallocated");
+      processFile(&DummyFile, path.c_str());
     }
   }
 }
@@ -676,10 +686,24 @@ void MetadataWriter::flushUnallocated() {
   }
   DummyFile.fs_info = Fs;
 
+  // throw out an entry for the folder, and then reset fields for being files
+  std::string name = "$Unallocated";
+  DummyName.meta_addr = std::numeric_limits<uint64_t>::max();
+  DummyName.name = DummyName.shrt_name = const_cast<char*>(name.c_str());
+  DummyName.name_size = DummyName.shrt_name_size = name.size();
+  DummyName.par_addr = Fs->root_inum;
+  DummyName.par_seq = 0;
+  DummyName.type = TSK_FS_NAME_TYPE_DIR;
+  DummyMeta.flags = TSK_FS_META_FLAG_UNUSED;
+  processFile(&DummyFile, "");
+  DummyName.type = TSK_FS_NAME_TYPE_VIRT;
+  DummyName.par_addr = DummyName.meta_addr;
+  DummyMeta.flags = TSK_FS_META_FLAG_USED;
+
   const unsigned int fieldWidth = std::log10(Fs->block_count) + 1;
-  std::string  name;
 
   const std::string fsID(bytesAsString(Fs->fs_id, &Fs->fs_id[Fs->fs_id_used]));
+
   TSK_DADDR_T start = Fs->first_block;
 
 //  std::cerr << "processing unallocated" << std::endl;

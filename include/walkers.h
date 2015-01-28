@@ -140,6 +140,7 @@ protected:
 
   std::string PartitionName;
 
+  uint64_t    NumUnallocated;
   ssize_t     DataWritten;
 
   bool        InUnallocated;
@@ -147,6 +148,7 @@ protected:
   UNALLOCATED_HANDLING UCMode;
 
   std::map< std::string, boost::icl::interval_map<uint64_t, std::set<uint64_t>> > AllocatedRuns; // FS ID->interval->inodes
+  std::map< std::string, unsigned int > NumRootEntries;
   decltype(AllocatedRuns.begin()) CurAllocatedItr;
 
   void setCurDir(const char* path);
