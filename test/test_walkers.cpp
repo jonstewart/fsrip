@@ -57,10 +57,10 @@ SCOPE_TEST(testDirInfoNewChild) {
 
 SCOPE_TEST(testMakeUnallocatedDataRun) {
   TSK_FS_ATTR_RUN         extent;
-  TSK_DADDR_T             start(20);
-  MetadataWriter::Extent  next(30, 40);
+  TSK_DADDR_T             start(20),
+                          end(30);
 
-  SCOPE_ASSERT(MetadataWriter::makeUnallocatedDataRun(start, next, extent));
+  SCOPE_ASSERT(MetadataWriter::makeUnallocatedDataRun(start, end, extent));
 
   SCOPE_ASSERT_EQUAL(start, extent.addr);
   SCOPE_ASSERT_EQUAL(10, extent.len);

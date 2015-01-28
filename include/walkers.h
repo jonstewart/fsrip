@@ -122,7 +122,7 @@ public:
 
   virtual void finishWalk();
 
-  static bool makeUnallocatedDataRun(TSK_DADDR_T start, Extent next, TSK_FS_ATTR_RUN& datarun);
+  static bool makeUnallocatedDataRun(TSK_DADDR_T start, TSK_DADDR_T end, TSK_FS_ATTR_RUN& datarun);
 
 protected:
   TSK_FS_INFO* Fs;
@@ -147,9 +147,11 @@ protected:
   void writeAttr(std::ostream& out, TSK_INUM_T addr, const TSK_FS_ATTR* attr, const bool isAllocated);
 
   void markAllocated(const Extent& allocated, TSK_INUM_T addr);
-  void flushUnallocated();
 
-  virtual void processUnallocatedFile(TSK_FS_FILE* file);
+  void prepUnallocatedFile(unsigned int fieldWidth, unsigned int blockSize, std::string& name,
+                                         TSK_FS_ATTR_RUN& run, TSK_FS_ATTR& attr, TSK_FS_META& meta, TSK_FS_NAME& nameRec);
+  void processUnallocatedFragment(TSK_DADDR_T start, TSK_DADDR_T end, unsigned int fieldWidth, std::string& name);
+  void flushUnallocated();
 
   TSK_FS_FILE       DummyFile;
   TSK_FS_NAME       DummyName;

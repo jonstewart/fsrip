@@ -268,7 +268,7 @@ MetadataWriter::MetadataWriter(std::ostream& out):
   DummyMeta.crtime_nano = 0;
   DummyMeta.ctime = 0;
   DummyMeta.ctime_nano = 0;
-  DummyMeta.flags = TSK_FS_META_FLAG_UNALLOC;
+  DummyMeta.flags = (TSK_FS_META_FLAG_ENUM)(TSK_FS_META_FLAG_UNALLOC | TSK_FS_META_FLAG_USED);
   DummyMeta.gid = 0;
   DummyMeta.link = 0;
   DummyMeta.mode = TSK_FS_META_MODE_ENUM(0);
@@ -348,7 +348,7 @@ TSK_FILTER_ENUM MetadataWriter::filterVol(const TSK_VS_PART_INFO* vs_part) {
     DummyName.name_size = DummyName.shrt_name_size = partName.size();
 
 //    std::cerr << "processing " << CurDir << name << std::endl;
-    processUnallocatedFile(&DummyFile);
+    processFile(&DummyFile, "");
 //    std::cerr << "done processing" << std::endl;
   }
   PartitionName = partName;
@@ -575,10 +575,10 @@ void MetadataWriter::writeAttr(std::ostream& out, TSK_INUM_T addr, const TSK_FS_
   out << "}";
 }
 
-bool MetadataWriter::makeUnallocatedDataRun(TSK_DADDR_T start, Extent next, TSK_FS_ATTR_RUN& datarun) {
-  if (start < next.first && next.first <= next.second) {
+bool MetadataWriter::makeUnallocatedDataRun(TSK_DADDR_T start, TSK_DADDR_T end, TSK_FS_ATTR_RUN& datarun) {
+  if (start < end) {
     datarun.addr = start;
-    datarun.len = next.first - start;
+    datarun.len = end - start;
     datarun.offset = 0;
     return true;
   }
@@ -594,78 +594,59 @@ void MetadataWriter::markAllocated(const Extent& allocated, TSK_INUM_T addr) {
   }
 }
 
-void MetadataWriter::processUnallocatedFile(TSK_FS_FILE* file) {
+void MetadataWriter::prepUnallocatedFile(unsigned int fieldWidth, unsigned int blockSize, std::string& name,
+                                         TSK_FS_ATTR_RUN& run, TSK_FS_ATTR& attr, TSK_FS_META& meta, TSK_FS_NAME& nameRec)
+{
   std::stringstream buf;
-  writeFile(buf, file);
-  const std::string output(buf.str());
-  Out << output << '\n';
-  DataWritten += output.size();
-  FileCounter::processFile(file, Dirs.back().path().c_str());
+  buf << std::setw(fieldWidth) << std::setfill('0')
+    << run.addr << "-" << run.len;
+  name = buf.str();
+  // std::cerr << "name = " << name << std::endl;
+  nameRec.name = nameRec.shrt_name = const_cast<char*>(name.c_str());
+  nameRec.name_size = nameRec.shrt_name_size = name.size();
+
+  meta.size = attr.size = attr.nrd.allocsize = run.len * blockSize;
+}
+
+void MetadataWriter::processUnallocatedFragment(TSK_DADDR_T start, TSK_DADDR_T end, unsigned int fieldWidth, std::string& name) {
+  if (makeUnallocatedDataRun(start, end, DummyAttrRun)) {
+    if (BLOCK == UCMode) {
+      for (TSK_DADDR_T cur(start); cur != end; ++cur) {
+        makeUnallocatedDataRun(cur, cur + 1, DummyAttrRun);
+        prepUnallocatedFile(fieldWidth, Fs->block_size, name, DummyAttrRun, DummyAttr, DummyMeta, DummyName);
+        processFile(&DummyFile, "$Unallocated/");
+      }
+    }
+    else {
+      makeUnallocatedDataRun(start, end, DummyAttrRun);
+      prepUnallocatedFile(fieldWidth, Fs->block_size, name, DummyAttrRun, DummyAttr, DummyMeta, DummyName);
+      processFile(&DummyFile, "$Unallocated");
+    }
+  }
 }
 
 void MetadataWriter::flushUnallocated() {
   if (!Fs || UCMode == NONE) {
     return;
   }
-  setCurDir("$Unallocated/");
-
   DummyFile.fs_info = Fs;
 
   const unsigned int fieldWidth = std::log10(Fs->block_count) + 1;
   std::string  name;
 
   const std::string fsID(bytesAsString(Fs->fs_id, &Fs->fs_id[Fs->fs_id_used]));
+  TSK_DADDR_T start = Fs->first_block;
 
 //  std::cerr << "processing unallocated" << std::endl;
-  // uint num = UnallocatedRuns.size();
-  // for (auto unallocated: UnallocatedRuns) {
-  //   ++num;
-  // }
-//  std::cerr << num << " unallocated fragments" << std::endl;
   const auto& partition = AllocatedRuns[fsID];
-  for (decltype(partition.begin()) it(partition.begin()); it != partition.end(); ++it) {
-    auto unallocated = *it;
-    // std::cerr << "got here" << std::endl;
-    // std::cerr << "run [" << unallocated.lower() << ", " << unallocated.upper() << ")" << std::endl;
-
-    if (FRAGMENT == UCMode) {
-      DummyAttrRun.addr = unallocated.first.lower();
-      DummyAttrRun.len = unallocated.first.upper() - DummyAttrRun.addr;
-      DummyMeta.size = DummyAttr.size = DummyAttr.nrd.allocsize = DummyAttrRun.len * Fs->block_size;
-      std::stringstream buf;
-      buf << std::setw(fieldWidth) << std::setfill('0')
-        << DummyAttrRun.addr << "-" << DummyAttrRun.len;
-      name = buf.str();
-      // std::cerr << "name = " << name << std::endl;
-      DummyName.name = DummyName.shrt_name = const_cast<char*>(name.c_str());
-      DummyName.name_size = DummyName.shrt_name_size = std::strlen(DummyName.name);
-
-  //    std::cerr << "processing " << CurDir << name << std::endl;
-      processUnallocatedFile(&DummyFile);
-  //    std::cerr << "done processing" << std::endl;
-
-      Dirs.back().incCount();
-    }
-    else if (BLOCK == UCMode) {
-      DummyAttrRun.len = 1;
-      DummyMeta.size = DummyAttr.size = DummyAttr.nrd.allocsize = DummyAttrRun.len * Fs->block_size;
-      for (auto cur = unallocated.first.lower(); cur < unallocated.first.upper(); ++cur) {
-        DummyAttrRun.addr = cur;
-        std::stringstream buf;
-        buf << std::setw(fieldWidth) << std::setfill('0') << DummyAttrRun.addr;
-        name = buf.str();
-        // std::cerr << "name = " << name << std::endl;
-        DummyName.name = DummyName.shrt_name = const_cast<char*>(name.c_str());
-        DummyName.name_size = DummyName.shrt_name_size = std::strlen(DummyName.name);
-
-    //    std::cerr << "processing " << CurDir << name << std::endl;
-        processUnallocatedFile(&DummyFile);
-    //    std::cerr << "done processing" << std::endl;
-
-        Dirs.back().incCount();
-      }
-    }
+  // iterate over the allocated extents
+  // start is the end of the last allocated extent, end is the beginning of the next,
+  // so we need to do one more round after the loop completes
+  for (auto nextFrag(partition.begin()); nextFrag != partition.end(); ++nextFrag) {
+    processUnallocatedFragment(start, nextFrag->first.lower(), fieldWidth, name);
+    start = nextFrag->first.upper();
   }
+  processUnallocatedFragment(start, Fs->last_block, fieldWidth, name);
 //  std::cerr << "done processing unallocated" << std::endl;
 
   // Out << "[";
