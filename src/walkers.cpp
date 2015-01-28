@@ -181,6 +181,51 @@ std::ostream& operator<<(std::ostream& out, const Image& img) {
 }
 /*************************************************************************/
 
+uint8_t ImageInfo::start() {
+  // std::cerr << "starting to read image" << std::endl;
+
+  std::shared_ptr<Image> img = Image::wrap(m_img_info, Files, false);
+
+  Out << "{";
+
+  Out << j(std::string("files")) << ":[";
+  writeSequence(std::cout, img->files().begin(), img->files().end(), ", ");
+  Out << "]"
+      << j("description", img->desc())
+      << j("size", img->size())
+      << j("sectorSize", img->sectorSize());
+  Out.flush();
+  // std::cerr << "heyo" << std::endl;
+
+  if (std::shared_ptr<VolumeSystem> vs = img->volumeSystem().lock()) {
+    Out << "," << j("volumeSystem") << ":{"
+        << j("type", vs->type(), true)
+        << j("description", vs->desc())
+        << j("blockSize", vs->blockSize())
+        << j("numVolumes", vs->numVolumes())
+        << j("offset", vs->offset());
+
+    if (vs->numVolumes()) {
+      Out << "," << j(std::string("volumes")) << ":[";
+      writeSequence(Out, vs->volBegin(), vs->volEnd(), ",");
+      Out << "]";
+    }
+    else {
+      std::cerr << "Image has volume system, but no volumes" << std::endl;
+    }
+    Out << "}";
+  }
+  else if (std::shared_ptr<Filesystem> fs = img->filesystem().lock()) {
+    outputFS(Out, fs);
+  }
+  else {
+    std::cerr << "Image had neither a volume system nor a filesystem" << std::endl;
+  }
+  Out << "}" << std::endl;
+  return 0;
+}
+/*************************************************************************/
+
 uint8_t ImageDumper::start() {
   ssize_t rlen;
   char buf[4096];

@@ -77,6 +77,17 @@ private:
   std::ostream& Out;
 };
 
+class ImageInfo: public LbtTskAuto {
+public:
+  ImageInfo(std::ostream& out, const std::vector<std::string>& files): Out(out), Files(files) {}
+
+  virtual uint8_t start();
+
+private:
+  std::ostream& Out;
+  std::vector<std::string> Files;
+};
+
 class FileCounter: public LbtTskAuto {
 public:
   FileCounter(std::ostream& out): NumFiles(0), Out(out) {}

@@ -40,7 +40,10 @@ void printHelp(const po::options_description& desc) {
 }
 
 std::shared_ptr<LbtTskAuto> createVisitor(const std::string& cmd, std::ostream& out, const std::vector<std::string>& segments) {
-  if (cmd == "dumpimg") {
+  if (cmd == "info") {
+    return std::shared_ptr<LbtTskAuto>(new ImageInfo(out, segments));
+  }
+  else if (cmd == "dumpimg") {
     return std::shared_ptr<LbtTskAuto>(new ImageDumper(out));
   }
   else if (cmd == "dumpfs") {
@@ -87,7 +90,7 @@ int main(int argc, char *argv[]) {
   posOpts.add("ev-files", -1);
   desc.add_options()
     ("help", "produce help message")
-    ("command", po::value< std::string >(), "command to perform [dumpimg|dumpfs|dumpfiles]")
+    ("command", po::value< std::string >(), "command to perform [info|dumpimg|dumpfs|dumpfiles]")
     ("overview-file", po::value< std::string >(), "output disk overview information")
     ("unallocated", po::value< std::string >(&ucMode)->default_value("none"), "how to handle unallocated [none|fragment|block]")
     ("volume-entries", po::value< std::string >(&volMode)->default_value("none"), "output metadata entries for volumes [none|unallocated|allocated|metadata|all")
