@@ -659,7 +659,7 @@ void MetadataWriter::prepUnallocatedFile(unsigned int fieldWidth, unsigned int b
 
   meta.size = attr.size = attr.nrd.allocsize = run.len * blockSize;
 
-  nameRec.meta_addr = meta.addr = std::numeric_limits<uint64_t>::max() - ++NumUnallocated;
+  nameRec.meta_addr = meta.addr = std::numeric_limits<uint64_t>::max() - run.addr;
 }
 
 void MetadataWriter::processUnallocatedFragment(TSK_DADDR_T start, TSK_DADDR_T end, unsigned int fieldWidth, std::string& name) {
@@ -688,7 +688,7 @@ void MetadataWriter::flushUnallocated() {
 
   // throw out an entry for the folder, and then reset fields for being files
   std::string name = "$Unallocated";
-  DummyName.meta_addr = std::numeric_limits<uint64_t>::max();
+  DummyName.meta_addr = 0;
   DummyName.name = DummyName.shrt_name = const_cast<char*>(name.c_str());
   DummyName.name_size = DummyName.shrt_name_size = name.size();
   DummyName.par_addr = Fs->root_inum;
