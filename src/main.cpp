@@ -113,7 +113,7 @@ void outputDiskMap(const std::string& diskMapFile, std::shared_ptr<LbtTskAuto> w
           if (!firstFile) {
             file << ", ";
           }
-          file << "{\"inum\":" << f.first << ", \"id\":" << f.second << "}";
+          file << "{\"inum\":" << static_cast<int64_t>(f.first) << ", \"id\":" << f.second << "}";
           firstFile = false;
         }
         file << "]}";

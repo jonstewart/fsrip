@@ -168,9 +168,9 @@ protected:
   void writeFile(std::ostream& out, const TSK_FS_FILE* file);
   void writeNameRecord(std::ostream& out, const TSK_FS_NAME* n);
   void writeMetaRecord(std::ostream& out, const TSK_FS_FILE* file, const TSK_FS_INFO* fs);
-  void writeAttr(std::ostream& out, TSK_INUM_T addr, const TSK_FS_ATTR* attr, const bool isAllocated);
+  void writeAttr(std::ostream& out, TSK_INUM_T addr, const TSK_FS_ATTR* attr);
 
-  void markAllocated(const Extent& allocated, TSK_INUM_T addr, uint32_t attrID);
+  void markDataRun(const Extent& allocated, TSK_INUM_T addr, uint32_t attrID);
 
   void prepUnallocatedFile(unsigned int fieldWidth, unsigned int blockSize, std::string& name,
                                          TSK_FS_ATTR_RUN& run, TSK_FS_ATTR& attr, TSK_FS_META& meta, TSK_FS_NAME& nameRec);

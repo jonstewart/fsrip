@@ -526,7 +526,7 @@ void MetadataWriter::writeMetaRecord(std::ostream& out, const TSK_FS_FILE* file,
         if (lastAttr != 0) {
           out << ", ";
         }
-        writeAttr(out, i->addr, a, i->flags & TSK_FS_META_FLAG_ALLOC);
+        writeAttr(out, i->addr, a);
         lastAttr = a;
       }
     }
@@ -541,7 +541,7 @@ void MetadataWriter::writeMetaRecord(std::ostream& out, const TSK_FS_FILE* file,
           if (num > 0) {
             out << ", ";
           }
-          writeAttr(out, i->addr, a, i->flags & TSK_FS_META_FLAG_ALLOC);
+          writeAttr(out, i->addr, a);
           ++num;
         }
       }
@@ -582,7 +582,7 @@ void MetadataWriter::writeFile(std::ostream& out, const TSK_FS_FILE* file) {
   out << "} } }";
 }
 
-void MetadataWriter::writeAttr(std::ostream& out, TSK_INUM_T addr, const TSK_FS_ATTR* a, const bool isAllocated) {
+void MetadataWriter::writeAttr(std::ostream& out, TSK_INUM_T addr, const TSK_FS_ATTR* a) {
   out << "{"
       << j("flags", attrFlags(a->flags), true)
       << j("id", a->id)
@@ -610,9 +610,7 @@ void MetadataWriter::writeAttr(std::ostream& out, TSK_INUM_T addr, const TSK_FS_
   if (a->flags & TSK_FS_ATTR_NONRES && a->nrd.run) {
     out << ", \"nrd_runs\":[";
     for (TSK_FS_ATTR_RUN* curRun = a->nrd.run; curRun; curRun = curRun->next) {
-      if (isAllocated) {
-        markAllocated(Extent(curRun->addr, curRun->addr + curRun->len), addr, a->id);
-      }
+      markDataRun(Extent(curRun->addr, curRun->addr + curRun->len), addr, a->id);
 
       if (curRun != a->nrd.run) {
         out << ", ";
@@ -639,7 +637,7 @@ bool MetadataWriter::makeUnallocatedDataRun(TSK_DADDR_T start, TSK_DADDR_T end, 
   return false;
 }
 
-void MetadataWriter::markAllocated(const Extent& allocated, TSK_INUM_T addr, uint32_t attrID) {
+void MetadataWriter::markDataRun(const Extent& allocated, TSK_INUM_T addr, uint32_t attrID) {
   if (allocated.first < allocated.second && allocated.second <= Fs->block_count) {
     std::get<3>(CurAllocatedItr->second) += std::make_pair(
       boost::icl::discrete_interval<uint64_t>::right_open(allocated.first, allocated.second),
