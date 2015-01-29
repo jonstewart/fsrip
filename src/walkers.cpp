@@ -416,7 +416,7 @@ TSK_FILTER_ENUM MetadataWriter::filterFs(TSK_FS_INFO *fs) {
   else {
 //    AllocatedRuns[FsID] += std::make_pair(interval<uint64>::right_open(0, fs->block_count), std::set<std::string>({"Unallocated"}));
 //    boost::icl::discrete_interval<uint64>::right_open(0, fs->block_count, {"Unallocated"});
-    CurAllocatedItr = AllocatedRuns.insert(std::make_pair(FsID, boost::icl::interval_map<uint64_t, std::set<uint64_t>>())).first;
+    CurAllocatedItr = AllocatedRuns.insert(std::make_pair(FsID, boost::icl::interval_map<uint64_t, std::set<std::pair<uint64_t,uint32_t>>>())).first;
     return TSK_FILTER_CONT;
   }
 }
@@ -609,7 +609,7 @@ void MetadataWriter::writeAttr(std::ostream& out, TSK_INUM_T addr, const TSK_FS_
     out << ", \"nrd_runs\":[";
     for (TSK_FS_ATTR_RUN* curRun = a->nrd.run; curRun; curRun = curRun->next) {
       if (isAllocated) {
-        markAllocated(Extent(curRun->addr, curRun->addr + curRun->len), addr);
+        markAllocated(Extent(curRun->addr, curRun->addr + curRun->len), addr, a->id);
       }
 
       if (curRun != a->nrd.run) {
@@ -637,11 +637,11 @@ bool MetadataWriter::makeUnallocatedDataRun(TSK_DADDR_T start, TSK_DADDR_T end, 
   return false;
 }
 
-void MetadataWriter::markAllocated(const Extent& allocated, TSK_INUM_T addr) {
+void MetadataWriter::markAllocated(const Extent& allocated, TSK_INUM_T addr, uint32_t attrID) {
   if (allocated.first < allocated.second && allocated.second <= Fs->block_count) {
     CurAllocatedItr->second += std::make_pair(
       boost::icl::discrete_interval<uint64_t>::right_open(allocated.first, allocated.second),
-      std::set<uint64_t>({addr})
+      std::set<std::pair<uint64_t,uint32_t>>({{addr, attrID}})
     );
   }
 }
