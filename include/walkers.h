@@ -115,6 +115,10 @@ protected:
 class MetadataWriter: public FileCounter {
 public:
   typedef std::pair<TSK_DADDR_T, TSK_DADDR_T> Extent;
+  typedef std::pair<TSK_DADDR_T, uint32_t> AttrRunID;
+  typedef boost::icl::interval_map<uint64_t, std::set<AttrRunID>> FsMap;
+  typedef std::tuple<uint32_t, uint64_t, uint64_t, FsMap> FsMapInfo;
+  typedef std::map<std::string, FsMapInfo> DiskMap;
 
   MetadataWriter(std::ostream& out);
 
@@ -133,6 +137,11 @@ public:
 
   virtual void finishWalk();
 
+  const DiskMap& diskMap() const { return AllocatedRuns; }
+
+  uint64_t diskSize() const { return DiskSize; }
+  uint32_t sectorSize() const { return SectorSize; }
+
   static bool makeUnallocatedDataRun(TSK_DADDR_T start, TSK_DADDR_T end, TSK_FS_ATTR_RUN& datarun);
 
 protected:
@@ -140,14 +149,16 @@ protected:
 
   std::string PartitionName;
 
-  uint64_t    NumUnallocated;
+  uint64_t    NumUnallocated,
+              DiskSize;
   ssize_t     DataWritten;
+  uint32_t    SectorSize;
 
   bool        InUnallocated;
 
   UNALLOCATED_HANDLING UCMode;
 
-  std::map< std::string, boost::icl::interval_map<uint64_t, std::set<std::pair<uint64_t, uint32_t>>>> AllocatedRuns; // FS ID->interval->inodes
+  DiskMap AllocatedRuns; // FS ID->interval->inodes
   std::map< std::string, unsigned int > NumRootEntries;
   decltype(AllocatedRuns.begin()) CurAllocatedItr;
 

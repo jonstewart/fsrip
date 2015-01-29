@@ -78,8 +78,62 @@ int makeVolMode(const std::string& mode) {
   }
 }
 
+void outputDiskMap(const std::string& diskMapFile, std::shared_ptr<LbtTskAuto> w) {
+  std::cerr << "outputDiskMap" << std::endl;
+  auto walker(std::dynamic_pointer_cast<MetadataWriter>(w));
+  if (walker) {
+    std::ofstream file(diskMapFile, std::ios::out | std::ios::trunc);
+    file  << "{ \"size\":" << walker->diskSize()
+          << ", \"sectorSize\":" << walker->sectorSize()
+          << ", \"filesystems\": [\n";
+
+    auto map(walker->diskMap());
+    bool firstFs = true;
+    for (auto fsMapInfo: map) {
+      if (!firstFs) {
+        file << ",\n";
+      }
+      file  << "{\"fsID\":\"" << fsMapInfo.first
+            << "\", \"blockSize\":" << std::get<0>(fsMapInfo.second)
+            << ", \"begin\":" << std::get<1>(fsMapInfo.second)
+            << ", \"end\":" << std::get<2>(fsMapInfo.second)
+            << ", \"layout\":[\n";
+
+      auto layout = std::get<3>(fsMapInfo.second);
+      bool firstFrag = true;
+      for (auto frag: layout) {
+        if (!firstFrag) {
+          file << ",\n";
+        }
+        file  << "{\"b\":" << frag.first.lower()
+              << ", \"e\":" << frag.first.upper()
+              << ", \"f\":[";
+        bool firstFile = true;
+        for (auto f: frag.second) {
+          if (!firstFile) {
+            file << ", ";
+          }
+          file << "{\"inum\":" << f.first << ", \"id\":" << f.second << "}";
+          firstFile = false;
+        }
+        file << "]}";
+        firstFrag = false;
+      }
+      file << "\n]}";
+      firstFs = false;
+    }
+    file << "\n]}" << std::endl;
+    file.close();
+  }
+}
+
+void outputInodeMap(po::variables_map vm, std::shared_ptr<LbtTskAuto> w) {
+
+}
+
 int main(int argc, char *argv[]) {
-  std::string ucMode,
+  std::string command,
+              ucMode,
               volMode,
               inodeMapFile,
               diskMapFile;
@@ -90,7 +144,7 @@ int main(int argc, char *argv[]) {
   posOpts.add("ev-files", -1);
   desc.add_options()
     ("help", "produce help message")
-    ("command", po::value< std::string >(), "command to perform [info|dumpimg|dumpfs|dumpfiles]")
+    ("command", po::value< std::string >(&command), "command to perform [info|dumpimg|dumpfs|dumpfiles]")
     ("overview-file", po::value< std::string >(), "output disk overview information")
     ("unallocated", po::value< std::string >(&ucMode)->default_value("none"), "how to handle unallocated [none|fragment|block]")
     ("volume-entries", po::value< std::string >(&volMode)->default_value("none"), "output metadata entries for volumes [none|unallocated|allocated|metadata|all")
@@ -112,7 +166,7 @@ int main(int argc, char *argv[]) {
     if (vm.count("help")) {
       printHelp(desc);
     }
-    else if (vm.count("command") && vm.count("ev-files") && (walker = createVisitor(vm["command"].as<std::string>(), std::cout, imgSegs))) {
+    else if (vm.count("command") && vm.count("ev-files") && (walker = createVisitor(command, std::cout, imgSegs))) {
       std_binary_io();
 
       boost::scoped_array< const char* >  segments(new const char*[imgSegs.size()]);
@@ -141,6 +195,12 @@ int main(int argc, char *argv[]) {
         if (0 == walker->start()) {
           walker->startUnallocated();
           walker->finishWalk();
+          if (vm.count("disk-map-file") && command == "dumpfs") {
+            outputDiskMap(diskMapFile, walker);
+          }
+          if (vm.count("inode-map-file") && command == "dumpfs") {
+            outputInodeMap(vm, walker);
+          }
           return 0;
         }
         else {

@@ -330,6 +330,8 @@ MetadataWriter::MetadataWriter(std::ostream& out):
 }
 
 uint8_t MetadataWriter::start() {
+  DiskSize = m_img_info->size;
+  SectorSize = m_img_info->sector_size;
   return LbtTskAuto::start();
 }
 
@@ -416,7 +418,7 @@ TSK_FILTER_ENUM MetadataWriter::filterFs(TSK_FS_INFO *fs) {
   else {
 //    AllocatedRuns[FsID] += std::make_pair(interval<uint64>::right_open(0, fs->block_count), std::set<std::string>({"Unallocated"}));
 //    boost::icl::discrete_interval<uint64>::right_open(0, fs->block_count, {"Unallocated"});
-    CurAllocatedItr = AllocatedRuns.insert(std::make_pair(FsID, boost::icl::interval_map<uint64_t, std::set<std::pair<uint64_t,uint32_t>>>())).first;
+    CurAllocatedItr = AllocatedRuns.insert(std::make_pair(FsID, FsMapInfo({fs->block_size, fs->first_block, fs->last_block, FsMap()}))).first;
     return TSK_FILTER_CONT;
   }
 }
@@ -639,7 +641,7 @@ bool MetadataWriter::makeUnallocatedDataRun(TSK_DADDR_T start, TSK_DADDR_T end, 
 
 void MetadataWriter::markAllocated(const Extent& allocated, TSK_INUM_T addr, uint32_t attrID) {
   if (allocated.first < allocated.second && allocated.second <= Fs->block_count) {
-    CurAllocatedItr->second += std::make_pair(
+    std::get<3>(CurAllocatedItr->second) += std::make_pair(
       boost::icl::discrete_interval<uint64_t>::right_open(allocated.first, allocated.second),
       std::set<std::pair<uint64_t,uint32_t>>({{addr, attrID}})
     );
@@ -707,7 +709,7 @@ void MetadataWriter::flushUnallocated() {
   TSK_DADDR_T start = Fs->first_block;
 
 //  std::cerr << "processing unallocated" << std::endl;
-  const auto& partition = AllocatedRuns[fsID];
+  const auto& partition = std::get<3>(AllocatedRuns[fsID]);
   // iterate over the allocated extents
   // start is the end of the last allocated extent, end is the beginning of the next,
   // so we need to do one more round after the loop completes
