@@ -627,7 +627,6 @@ void MetadataWriter::writeAttr(std::ostream& out, TSK_INUM_T addr, const TSK_FS_
   if (a->flags & TSK_FS_ATTR_NONRES && a->nrd.run) {
     out << ", \"nrd_runs\":[";
     uint64_t i = 0;
-    int64_t  fileOffset = 0 - a->nrd.skiplen;
     for (TSK_FS_ATTR_RUN* curRun = a->nrd.run; curRun; curRun = curRun->next) {
       markDataRun(addr, a->id, *curRun, i);
 
@@ -661,7 +660,7 @@ void MetadataWriter::markDataRun(TSK_INUM_T addr, uint32_t attrID, const TSK_FS_
   if (dataRun.addr + dataRun.len <= Fs->block_count) {
     std::get<3>(CurAllocatedItr->second) += std::make_pair(
       boost::icl::discrete_interval<uint64_t>::right_open(dataRun.addr, dataRun.addr + dataRun.len),
-      AttrSet({{addr, attrID, index}})
+      AttrSet({AttrRunInfo{addr, attrID, index}})
     );
   }
 }

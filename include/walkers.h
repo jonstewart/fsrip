@@ -111,7 +111,7 @@ protected:
 class MetadataWriter: public FileCounter {
 public:
   typedef std::pair<TSK_DADDR_T, TSK_DADDR_T> Extent;
-  //                 inum      attrID    run start file offset
+  //                 inum      attrID    run index
   typedef std::tuple<uint64_t, uint32_t, uint64_t> AttrRunInfo;
   typedef std::set<AttrRunInfo> AttrSet;
   typedef boost::icl::interval_map<uint64_t, AttrSet> FsMap;
