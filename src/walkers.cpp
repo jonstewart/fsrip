@@ -446,7 +446,7 @@ void MetadataWriter::setFsInfo(TSK_FS_INFO* fs, uint64_t startSector, uint64_t e
   CurAllocatedItr = AllocatedRuns.find(FsID);
   if (AllocatedRuns.end() == CurAllocatedItr) {
     CurAllocatedItr = AllocatedRuns.insert(std::make_pair(FsID,
-                        FsMapInfo({fs->block_size, startSector, endSector, FsMap()}))).first;
+                        std::make_tuple(fs->block_size, startSector, endSector, FsMap{}))).first;
   }
 }
 
@@ -660,7 +660,7 @@ void MetadataWriter::markDataRun(TSK_INUM_T addr, uint32_t attrID, const TSK_FS_
   if (dataRun.addr + dataRun.len <= Fs->block_count) {
     std::get<3>(CurAllocatedItr->second) += std::make_pair(
       boost::icl::discrete_interval<uint64_t>::right_open(dataRun.addr, dataRun.addr + dataRun.len),
-      AttrSet({AttrRunInfo{addr, attrID, index}})
+      AttrSet{{{addr, attrID, index}}}
     );
   }
 }
