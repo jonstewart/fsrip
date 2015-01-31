@@ -270,7 +270,7 @@ ssize_t physicalSize(const TSK_FS_FILE* file) {
 }
 
 MetadataWriter::MetadataWriter(std::ostream& out):
-  FileCounter(out), Fs(0), DataWritten(0), InUnallocated(false), UCMode(NONE)
+  FileCounter(out), Fs(0), NumUnallocated(0), DiskSize(0), DataWritten(0), SectorSize(0), NumVols(0), InUnallocated(false), UCMode(NONE)
 {
   DummyFile.name = &DummyName;
   DummyFile.meta = &DummyMeta;
@@ -327,6 +327,7 @@ MetadataWriter::MetadataWriter(std::ostream& out):
   DummyMeta.time2.ext2.dtime_nano = 0;
   DummyMeta.type = TSK_FS_META_TYPE_VIRT;
   DummyMeta.uid = 0;  
+  Dirs.emplace_back(DirInfo());
 }
 
 uint8_t MetadataWriter::start() {
@@ -340,6 +341,9 @@ std::string getPartName(const TSK_VS_PART_INFO* vs_part) {
   if (vs_part->flags & TSK_VS_PART_FLAG_ALLOC) {
     buf << "part-" << (int)vs_part->table_num << "-" << (int)vs_part->slot_num;
   }
+  else if (vs_part->flags & TSK_VS_PART_FLAG_META) {
+    buf << "meta-part@" << vs_part->start;
+  }
   else {
     buf << "unused@" << vs_part->start;
   }
@@ -348,16 +352,16 @@ std::string getPartName(const TSK_VS_PART_INFO* vs_part) {
 
 TSK_FILTER_ENUM MetadataWriter::filterVol(const TSK_VS_PART_INFO* vs_part) {
   PartitionName.clear();
+  Part = vs_part;
 
   std::string partName(getPartName(vs_part));
   std::stringstream buf;
   buf << vs_part->addr;
   std::string partID(buf.str());
 
-  if (!InUnallocated &&
-     (VolMode & vs_part->flags) &&
-     ((VolMode & TSK_VS_PART_FLAG_META) || (0 == (vs_part->flags & TSK_VS_PART_FLAG_META))))
-  {
+  Dirs.resize(1);
+  if (!InUnallocated) {
+    ++NumVols;
     TSK_FS_INFO fs; // we'll make image & volume system look like an fs, sort of
                     // fs.partName will be empty, since we're not _in_ a partition
     const TSK_VS_INFO* vs = vs_part->vs;
@@ -367,26 +371,30 @@ TSK_FILTER_ENUM MetadataWriter::filterVol(const TSK_VS_PART_INFO* vs_part) {
     fs.duname = "sector";
     fs.endian = vs->endian;
     fs.first_block = 0;
-    fs.first_inum = 0;
+    fs.first_inum = 1;
     fs.flags = TSK_FS_INFO_FLAG_NONE;
     fs.fs_id_used = 0;
     fs.ftype = TSK_FS_TYPE_UNSUPP;
     fs.img_info = vs->img_info;
-    fs.inum_count = 1;
+    fs.inum_count = vs->part_count;
     fs.journ_inum = 0;
+    fs.block_count = m_img_info->sector_size > 0 ? m_img_info->size / m_img_info->sector_size: 0;
     fs.last_block = fs.last_block_act = fs.block_count - 1;
-    fs.last_inum = 0;
+    fs.last_inum = vs->part_count;
     fs.list_inum_named = 0;
     fs.offset = 0;
     fs.orphan_dir = 0;
-    fs.root_inum = 0;
-    setFsInfoStr(&fs);
+    fs.root_inum = 1;
+    setFsInfo(&fs, fs.first_block, fs.first_block + fs.block_count);
 
     DummyFile.fs_info = &fs;
 
     DummyAttrRun.addr = vs_part->start;
     DummyAttrRun.len = vs_part->len;
+    DummyAttrRun.offset = 0;
     DummyMeta.size = DummyAttr.size = DummyAttr.nrd.allocsize = DummyAttrRun.len * fs.block_size;
+    
+    DummyName.meta_addr = DummyMeta.addr = NumVols;
 
     // std::cerr << "name = " << name << std::endl;
     DummyName.name = DummyName.shrt_name = const_cast<char*>(partName.c_str());
@@ -397,16 +405,13 @@ TSK_FILTER_ENUM MetadataWriter::filterVol(const TSK_VS_PART_INFO* vs_part) {
 //    std::cerr << "done processing" << std::endl;
   }
   PartitionName = partName;
+  Dirs.emplace_back(Dirs.back().newChild(PartitionName + "/"));
   return TSK_FILTER_CONT;
 }
 
 TSK_FILTER_ENUM MetadataWriter::filterFs(TSK_FS_INFO *fs) {
-  Dirs.clear();
-  Dirs.emplace_back(DirInfo());
-
   using namespace boost::icl;
-  setFsInfoStr(fs);
-  Fs = fs;
+  setFsInfo(fs, Part ? Part->start: 0, Part ? Part->start + Part->len: m_img_info->size / m_img_info->sector_size);
 
   if (InUnallocated) {
     for (unsigned i = 0; i < NumRootEntries[FsID]; ++i) {
@@ -416,9 +421,6 @@ TSK_FILTER_ENUM MetadataWriter::filterFs(TSK_FS_INFO *fs) {
     return TSK_FILTER_SKIP;
   }
   else {
-//    AllocatedRuns[FsID] += std::make_pair(interval<uint64>::right_open(0, fs->block_count), std::set<std::string>({"Unallocated"}));
-//    boost::icl::discrete_interval<uint64>::right_open(0, fs->block_count, {"Unallocated"});
-    CurAllocatedItr = AllocatedRuns.insert(std::make_pair(FsID, FsMapInfo({fs->block_size, fs->first_block, fs->last_block, FsMap()}))).first;
     return TSK_FILTER_CONT;
   }
 }
@@ -430,7 +432,7 @@ void MetadataWriter::startUnallocated() {
   }
 }
 
-void MetadataWriter::setFsInfoStr(TSK_FS_INFO* fs) {
+void MetadataWriter::setFsInfo(TSK_FS_INFO* fs, uint64_t startSector, uint64_t endSector) {
   FsID = bytesAsString(fs->fs_id, &fs->fs_id[fs->fs_id_used]);
   std::stringstream buf;
   buf << j(std::string("fs")) << ":{"
@@ -440,10 +442,25 @@ void MetadataWriter::setFsInfoStr(TSK_FS_INFO* fs) {
       << j("partName", PartitionName)
       << "}";
   FsInfo = buf.str();
+  Fs = fs; // does not take ownership
+  CurAllocatedItr = AllocatedRuns.find(FsID);
+  if (AllocatedRuns.end() == CurAllocatedItr) {
+    CurAllocatedItr = AllocatedRuns.insert(std::make_pair(FsID,
+                        FsMapInfo({fs->block_size, startSector, endSector, FsMap()}))).first;
+  }
+}
+
+bool MetadataWriter::atFSRootLevel(const std::string& path) const {
+  return path.size() == PartitionName.size() + 1 && path.back() == '/';
 }
 
 void MetadataWriter::setCurDir(const char* path) {
-  std::string p(path);
+  std::string p;
+  if (!PartitionName.empty()) {
+    p += PartitionName;
+    p += "/";
+  }
+  p += path;
 
   auto rItr = std::find_if(Dirs.rbegin(), Dirs.rend(), [&p](const DirInfo& d){ return d.path() == p; });
   if (rItr == Dirs.rend()) {
@@ -459,7 +476,7 @@ void MetadataWriter::setCurDir(const char* path) {
     Dirs.erase(rItr.base(), Dirs.end());
   }
   Dirs.back().incCount();
-  if (Dirs.size() == 1) {
+  if (atFSRootLevel(p)) {
     NumRootEntries[FsID] = Dirs.back().count();
   }
   std::cerr << "setCurDir(" << path << ") seen, id = " << Dirs.back().id() << ", Count = " << Dirs.back().count()

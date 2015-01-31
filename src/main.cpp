@@ -57,27 +57,6 @@ std::shared_ptr<LbtTskAuto> createVisitor(const std::string& cmd, std::ostream& 
   }
 }
 
-int makeVolMode(const std::string& mode) {
-  if (mode == "none") {
-    return 0;
-  }
-  else if (mode == "unallocated") {
-    return TSK_VS_PART_FLAG_UNALLOC;
-  }
-  else if (mode == "allocated") {
-    return TSK_VS_PART_FLAG_ALLOC;
-  }
-  else if (mode == "metadata") {
-    return TSK_VS_PART_FLAG_META;
-  }
-  else if (mode == "all") {
-    return TSK_VS_PART_FLAG_UNALLOC | TSK_VS_PART_FLAG_ALLOC | TSK_VS_PART_FLAG_META;
-  }
-  else {
-    return -1; // shouldn't happen
-  }
-}
-
 void outputDiskMap(const std::string& diskMapFile, std::shared_ptr<LbtTskAuto> w) {
   std::cerr << "outputDiskMap" << std::endl;
   auto walker(std::dynamic_pointer_cast<MetadataWriter>(w));
@@ -147,7 +126,6 @@ int main(int argc, char *argv[]) {
     ("command", po::value< std::string >(&command), "command to perform [info|dumpimg|dumpfs|dumpfiles]")
     ("overview-file", po::value< std::string >(), "output disk overview information")
     ("unallocated", po::value< std::string >(&ucMode)->default_value("none"), "how to handle unallocated [none|fragment|block]")
-    ("volume-entries", po::value< std::string >(&volMode)->default_value("none"), "output metadata entries for volumes [none|unallocated|allocated|metadata|all")
     ("ev-files", po::value< std::vector< std::string > >(), "evidence files")
     ("inode-map-file", po::value<std::string>(&inodeMapFile)->default_value(""), "optional file to output containing directory entry to inode map")
     ("disk-map-file", po::value<std::string>(&diskMapFile)->default_value(""), "optional file to output containing disk data to inode map");
@@ -182,7 +160,6 @@ int main(int argc, char *argv[]) {
 
         walker->setVolFilterFlags((TSK_VS_PART_FLAG_ENUM)(TSK_VS_PART_FLAG_ALLOC | TSK_VS_PART_FLAG_UNALLOC | TSK_VS_PART_FLAG_META));
         walker->setFileFilterFlags((TSK_FS_DIR_WALK_FLAG_ENUM)(TSK_FS_DIR_WALK_FLAG_RECURSE | TSK_FS_DIR_WALK_FLAG_UNALLOC | TSK_FS_DIR_WALK_FLAG_ALLOC));
-        walker->setVolMetadataMode(makeVolMode(volMode));
         if (ucMode == "fragment") {
           walker->setUnallocatedMode(LbtTskAuto::FRAGMENT);
         }

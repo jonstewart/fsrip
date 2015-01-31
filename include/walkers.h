@@ -52,7 +52,6 @@ public:
   virtual ~LbtTskAuto() {}
 
   virtual void setUnallocatedMode(const UNALLOCATED_HANDLING) {}
-  virtual void setVolMetadataMode(const int) {} // should have bits set to TSK_VS_PART_FLAG_ENUM
 
   virtual uint8_t start();
 
@@ -94,8 +93,6 @@ public:
 
   virtual ~FileCounter() {}
 
-  virtual void setVolMetadataMode(const int volMode) { VolMode = volMode; }
-
   virtual TSK_RETVAL_ENUM processFile(TSK_FS_FILE*, const char*) {
     ++NumFiles;
     return TSK_OK;
@@ -108,7 +105,6 @@ public:
   unsigned int NumFiles;
 
 protected:
-  int           VolMode;
   std::ostream& Out;
 };
 
@@ -145,14 +141,16 @@ public:
   static bool makeUnallocatedDataRun(TSK_DADDR_T start, TSK_DADDR_T end, TSK_FS_ATTR_RUN& datarun);
 
 protected:
-  TSK_FS_INFO* Fs;
+  const TSK_VS_PART_INFO* Part;
+  TSK_FS_INFO*      Fs;
 
   std::string PartitionName;
 
   uint64_t    NumUnallocated,
               DiskSize;
   ssize_t     DataWritten;
-  uint32_t    SectorSize;
+  uint32_t    SectorSize,
+              NumVols;
 
   bool        InUnallocated;
 
@@ -163,7 +161,7 @@ protected:
   decltype(AllocatedRuns.begin()) CurAllocatedItr;
 
   void setCurDir(const char* path);
-  void setFsInfoStr(TSK_FS_INFO* fs);
+  void setFsInfo(TSK_FS_INFO* fs, uint64_t startSector, uint64_t endSector);
 
   void writeFile(std::ostream& out, const TSK_FS_FILE* file);
   void writeNameRecord(std::ostream& out, const TSK_FS_NAME* n);
@@ -176,6 +174,8 @@ protected:
                                          TSK_FS_ATTR_RUN& run, TSK_FS_ATTR& attr, TSK_FS_META& meta, TSK_FS_NAME& nameRec);
   void processUnallocatedFragment(TSK_DADDR_T start, TSK_DADDR_T end, unsigned int fieldWidth, std::string& name);
   void flushUnallocated();
+
+  bool atFSRootLevel(const std::string& path) const;
 
   TSK_FS_FILE       DummyFile;
   TSK_FS_NAME       DummyName;
