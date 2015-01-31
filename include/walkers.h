@@ -8,7 +8,7 @@
 
 std::ostream& operator<<(std::ostream& out, const Image& img);
 
-std::string makeFileID(const unsigned int level, const std::string& parentID, const unsigned int dirIndex);
+std::string makeFileID(const unsigned int level, const std::string& parentID, const int dirIndex);
 
 struct Extent {
   std::string FileID,

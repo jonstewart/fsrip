@@ -49,10 +49,13 @@ std::string appendVarint(const std::string& base, const unsigned int val) {
   return ret;
 }
 
-std::string makeFileID(const unsigned int level, const std::string& parentID, const unsigned int dirIndex) {
+std::string makeFileID(const unsigned int level, const std::string& parentID, const int dirIndex) {
   std::string ret(appendVarint("", level));
   ret += parentID;
-  return appendVarint(ret, dirIndex);
+  if (dirIndex > -1) {
+    ret = appendVarint(ret, dirIndex);
+  }
+  return ret;
 }
 
 DirInfo::DirInfo():
@@ -580,8 +583,12 @@ void MetadataWriter::writeNameRecord(std::ostream& out, const TSK_FS_NAME* n) {
 }
 
 void MetadataWriter::writeFile(std::ostream& out, const TSK_FS_FILE* file) {
-  std::string id(Dirs.back().lastChild());
-  out << "{" << j("id", id, true) << ", \"t\":{ \"fsmd\":{ ";
+  DirInfo fileDirEnt(Dirs.back().newChild(""));
+
+  out << "{" << j("id", fileDirEnt.id(), true)
+      << j("parent", Dirs.back().id())
+      << j("children", fileDirEnt.lastChild())
+      << ", \"t\":{ \"fsmd\":{ ";
 
   out << FsInfo
       << j("path", Dirs.back().path());
@@ -681,7 +688,6 @@ void MetadataWriter::writeAttr(std::ostream& out, TSK_INUM_T addr, const TSK_FS_
           << j("len", curRun->len)
           << j("offset", curRun->offset)
           << "}";
-      ++i;
     }
     out << "]";
   }

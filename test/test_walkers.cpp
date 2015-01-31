@@ -45,9 +45,13 @@ SCOPE_TEST(testDirInfoNewChild) {
   SCOPE_ASSERT_EQUAL(2, dad.count());
 
   SCOPE_ASSERT_EQUAL("0000", uncle.id());
+
   SCOPE_ASSERT_EQUAL("010000", cousin.id());
+
   SCOPE_ASSERT_EQUAL("0001", dad.id());
+
   SCOPE_ASSERT_EQUAL("010100", me.id());
+
   SCOPE_ASSERT_EQUAL("010101", bro.id());
 
   SCOPE_ASSERT_EQUAL("0001", gpa.lastChild());
