@@ -85,7 +85,7 @@ void outputDiskMap(const std::string& diskMapFile, std::shared_ptr<LbtTskAuto> w
           file << ",\n";
         }
         file  << "{\"b\":" << frag.first.lower()
-              << ", \"e\":" << frag.first.upper()
+              << ", \"l\":" << frag.first.upper() - frag.first.lower()
               << ", \"f\":[";
         bool firstFile = true;
         for (auto f: frag.second) {

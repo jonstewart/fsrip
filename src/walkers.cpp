@@ -658,8 +658,10 @@ bool MetadataWriter::makeUnallocatedDataRun(TSK_DADDR_T start, TSK_DADDR_T end, 
 
 void MetadataWriter::markDataRun(TSK_INUM_T addr, uint32_t attrID, const TSK_FS_ATTR_RUN& dataRun, uint64_t index) {
   if (dataRun.addr + dataRun.len <= Fs->block_count) {
+    uint64_t absStart = (dataRun.addr * Fs->block_size) + Fs->offset,
+             absEnd   = absStart + (dataRun.len * Fs->block_size);
     std::get<3>(CurAllocatedItr->second) += std::make_pair(
-      boost::icl::discrete_interval<uint64_t>::right_open(dataRun.addr, dataRun.addr + dataRun.len),
+      boost::icl::discrete_interval<uint64_t>::right_open(absStart, absEnd),
       AttrSet{{AttrRunInfo{addr, attrID, index}}}
     );
   }
@@ -723,7 +725,7 @@ void MetadataWriter::flushUnallocated() {
 
   const std::string fsID(bytesAsString(Fs->fs_id, &Fs->fs_id[Fs->fs_id_used]));
 
-  TSK_DADDR_T start = Fs->first_block;
+  TSK_DADDR_T start = (Fs->first_block * Fs->block_size) + Fs->offset;
 
 //  std::cerr << "processing unallocated" << std::endl;
   const auto& partition = std::get<3>(AllocatedRuns[fsID]);
@@ -731,10 +733,10 @@ void MetadataWriter::flushUnallocated() {
   // start is the end of the last allocated extent, end is the beginning of the next,
   // so we need to do one more round after the loop completes
   for (auto nextFrag(partition.begin()); nextFrag != partition.end(); ++nextFrag) {
-    processUnallocatedFragment(start, nextFrag->first.lower(), fieldWidth, name);
+    processUnallocatedFragment((start - Fs->offset) / Fs->block_size, (nextFrag->first.lower() - Fs->offset) / Fs->block_size, fieldWidth, name);
     start = nextFrag->first.upper();
   }
-  processUnallocatedFragment(start, Fs->last_block, fieldWidth, name);
+  processUnallocatedFragment((start - Fs->offset) / Fs->block_size, Fs->last_block, fieldWidth, name);
 //  std::cerr << "done processing unallocated" << std::endl;
 
   // Out << "[";
