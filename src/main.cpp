@@ -92,9 +92,13 @@ void outputDiskMap(const std::string& diskMapFile, std::shared_ptr<LbtTskAuto> w
           if (!firstFile) {
             file << ", ";
           }
+            //                 addr,     attrID,   slack, drbeg     offset
+
           file  << "{\"inum\":" << static_cast<int64_t>(std::get<0>(f))
                 << ", \"id\":" << std::get<1>(f)
-                << ", \"dri\":" << std::get<2>(f) << "}";
+                << ", \"s\":" << std::get<2>(f)
+                << ", \"drbeg\":" << std::get<3>(f)
+                << ", \"fo\":" << std::get<4>(f) << "}";
           firstFile = false;
         }
         file << "]}";

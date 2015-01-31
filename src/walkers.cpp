@@ -626,10 +626,52 @@ void MetadataWriter::writeAttr(std::ostream& out, TSK_INUM_T addr, const TSK_FS_
 
   if (a->flags & TSK_FS_ATTR_NONRES && a->nrd.run) {
     out << ", \"nrd_runs\":[";
-    uint64_t i = 0;
+    uint64_t fo = 0; // file offset
+    uint64_t slackFo = 0;
+    uint64_t skipBytes = a->nrd.skiplen; // up from 32 bits to 64 for convenience
     for (TSK_FS_ATTR_RUN* curRun = a->nrd.run; curRun; curRun = curRun->next) {
-      markDataRun(addr, a->id, *curRun, i);
+      if (TSK_FS_ATTR_RUN_FLAG_FILLER == curRun->flags) {
+        // TO-DO: check on the exact semantics of this flag
+        continue;
+      }
+      // normal case - make absolute offsets
+      uint64_t beg = (curRun->addr * Fs->block_size) + Fs->offset,
+               runEnd = beg + (curRun->len * Fs->block_size),
+               end = runEnd;
+      bool     trueSlack = false;
 
+      // if skipping, advance beg and decrement skipBytes accordingly
+      if (skipBytes > 0) { // still towards beginning where skiplen is > 0
+        uint64_t toSkip = std::min(end - beg, skipBytes);
+        beg += toSkip;
+        skipBytes -= toSkip;
+      }
+      if (beg < end) { // past skipping, we're onto data
+        uint64_t bytesRemaining = a->size - fo; // how much data left in file stream?
+        if (beg + bytesRemaining < end) {
+          end = beg + bytesRemaining; // end is now beginning of true slack
+          trueSlack = true;
+        }
+        if (beg < end) { // if false, we're fully into true slack, nothing of file left
+          if (TSK_FS_ATTR_RUN_FLAG_SPARSE == curRun->flags) {
+            // if run is sparse, then underlying data goes to slack stream, so we
+            // advance slackFo. But primary fo must also be advanced, too.
+            markDataRun(beg, end, slackFo, addr, a->id, true);
+            slackFo += (end - beg);
+          }
+          else {
+            // just normal data
+            markDataRun(beg, end, fo, addr, a->id, false);
+          }
+          fo += (end - beg);
+        }
+        if (trueSlack) {
+          // mark slack at end of allocated space
+          markDataRun(end, runEnd, slackFo, addr, a->id, true);
+          slackFo += (runEnd - end);
+        }
+      }
+      // output data run as json
       if (curRun != a->nrd.run) {
         out << ", ";
       }
@@ -646,6 +688,15 @@ void MetadataWriter::writeAttr(std::ostream& out, TSK_INUM_T addr, const TSK_FS_
   out << "}";
 }
 
+void MetadataWriter::markDataRun(uint64_t beg, uint64_t end, uint64_t offset, TSK_INUM_T addr, uint32_t attrID, bool slack) {
+  if (beg < end) {
+    std::get<3>(CurAllocatedItr->second) += std::make_pair(
+      boost::icl::discrete_interval<uint64_t>::right_open(beg, end),
+      AttrSet{{AttrRunInfo{addr, attrID, slack, beg, offset}}}
+    );
+  }
+}
+
 bool MetadataWriter::makeUnallocatedDataRun(TSK_DADDR_T start, TSK_DADDR_T end, TSK_FS_ATTR_RUN& datarun) {
   if (start < end) {
     datarun.addr = start;
@@ -654,17 +705,6 @@ bool MetadataWriter::makeUnallocatedDataRun(TSK_DADDR_T start, TSK_DADDR_T end, 
     return true;
   }
   return false;
-}
-
-void MetadataWriter::markDataRun(TSK_INUM_T addr, uint32_t attrID, const TSK_FS_ATTR_RUN& dataRun, uint64_t index) {
-  if (dataRun.addr + dataRun.len <= Fs->block_count) {
-    uint64_t absStart = (dataRun.addr * Fs->block_size) + Fs->offset,
-             absEnd   = absStart + (dataRun.len * Fs->block_size);
-    std::get<3>(CurAllocatedItr->second) += std::make_pair(
-      boost::icl::discrete_interval<uint64_t>::right_open(absStart, absEnd),
-      AttrSet{{AttrRunInfo{addr, attrID, index}}}
-    );
-  }
 }
 
 void MetadataWriter::prepUnallocatedFile(unsigned int fieldWidth, unsigned int blockSize, std::string& name,
