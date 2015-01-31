@@ -626,8 +626,10 @@ void MetadataWriter::writeAttr(std::ostream& out, TSK_INUM_T addr, const TSK_FS_
 
   if (a->flags & TSK_FS_ATTR_NONRES && a->nrd.run) {
     out << ", \"nrd_runs\":[";
+    uint64_t i = 0;
+    int64_t  fileOffset = 0 - a->nrd.skiplen;
     for (TSK_FS_ATTR_RUN* curRun = a->nrd.run; curRun; curRun = curRun->next) {
-      markDataRun(Extent(curRun->addr, curRun->addr + curRun->len), addr, a->id);
+      markDataRun(addr, a->id, *curRun, i);
 
       if (curRun != a->nrd.run) {
         out << ", ";
@@ -638,6 +640,7 @@ void MetadataWriter::writeAttr(std::ostream& out, TSK_INUM_T addr, const TSK_FS_
           << j("len", curRun->len)
           << j("offset", curRun->offset)
           << "}";
+      ++i;
     }
     out << "]";
   }
@@ -654,11 +657,11 @@ bool MetadataWriter::makeUnallocatedDataRun(TSK_DADDR_T start, TSK_DADDR_T end, 
   return false;
 }
 
-void MetadataWriter::markDataRun(const Extent& allocated, TSK_INUM_T addr, uint32_t attrID) {
-  if (allocated.first < allocated.second && allocated.second <= Fs->block_count) {
+void MetadataWriter::markDataRun(TSK_INUM_T addr, uint32_t attrID, const TSK_FS_ATTR_RUN& dataRun, uint64_t index) {
+  if (dataRun.addr + dataRun.len <= Fs->block_count) {
     std::get<3>(CurAllocatedItr->second) += std::make_pair(
-      boost::icl::discrete_interval<uint64_t>::right_open(allocated.first, allocated.second),
-      std::set<std::pair<uint64_t,uint32_t>>({{addr, attrID}})
+      boost::icl::discrete_interval<uint64_t>::right_open(dataRun.addr, dataRun.addr + dataRun.len),
+      AttrSet({{addr, attrID, index}})
     );
   }
 }

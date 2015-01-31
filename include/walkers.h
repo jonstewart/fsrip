@@ -111,8 +111,10 @@ protected:
 class MetadataWriter: public FileCounter {
 public:
   typedef std::pair<TSK_DADDR_T, TSK_DADDR_T> Extent;
-  typedef std::pair<TSK_DADDR_T, uint32_t> AttrRunID;
-  typedef boost::icl::interval_map<uint64_t, std::set<AttrRunID>> FsMap;
+  //                 inum      attrID    run start file offset
+  typedef std::tuple<uint64_t, uint32_t, uint64_t> AttrRunInfo;
+  typedef std::set<AttrRunInfo> AttrSet;
+  typedef boost::icl::interval_map<uint64_t, AttrSet> FsMap;
   typedef std::tuple<uint32_t, uint64_t, uint64_t, FsMap> FsMapInfo;
   typedef std::map<std::string, FsMapInfo> DiskMap;
 
@@ -168,7 +170,7 @@ protected:
   void writeMetaRecord(std::ostream& out, const TSK_FS_FILE* file, const TSK_FS_INFO* fs);
   void writeAttr(std::ostream& out, TSK_INUM_T addr, const TSK_FS_ATTR* attr);
 
-  void markDataRun(const Extent& allocated, TSK_INUM_T addr, uint32_t attrID);
+  void markDataRun(TSK_INUM_T addr, uint32_t attrID, const TSK_FS_ATTR_RUN& dataRun, uint64_t index);
 
   void prepUnallocatedFile(unsigned int fieldWidth, unsigned int blockSize, std::string& name,
                                          TSK_FS_ATTR_RUN& run, TSK_FS_ATTR& attr, TSK_FS_META& meta, TSK_FS_NAME& nameRec);
