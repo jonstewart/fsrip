@@ -660,7 +660,7 @@ void MetadataWriter::markDataRun(TSK_INUM_T addr, uint32_t attrID, const TSK_FS_
   if (dataRun.addr + dataRun.len <= Fs->block_count) {
     std::get<3>(CurAllocatedItr->second) += std::make_pair(
       boost::icl::discrete_interval<uint64_t>::right_open(dataRun.addr, dataRun.addr + dataRun.len),
-      AttrSet{{{addr, attrID, index}}}
+      AttrSet{{AttrRunInfo{addr, attrID, index}}}
     );
   }
 }
