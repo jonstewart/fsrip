@@ -16,6 +16,8 @@ Copyright (c) 2010 Lightbox Technologies, Inc.
 #include <boost/scoped_array.hpp>
 
 #include "walkers.h"
+#include "enums.h"
+#include "util.h"
 
 #if defined(__WIN32__) || defined(_WIN32_) || defined(__WIN32) || defined(_WIN32) || defined(WIN32) || defined(__WINDOWS__) || defined(__TOS_WIN__)
   #include <cstdio>
@@ -112,8 +114,40 @@ void outputDiskMap(const std::string& diskMapFile, std::shared_ptr<LbtTskAuto> w
   }
 }
 
-void outputInodeMap(po::variables_map vm, std::shared_ptr<LbtTskAuto> w) {
+void outputInodeMap(const std::string& inodeMapFile, std::shared_ptr<LbtTskAuto> w) {
+  auto walker(std::dynamic_pointer_cast<MetadataWriter>(w));
+  if (walker) {
+    std::ofstream file(inodeMapFile, std::ios::out | std::ios::trunc);
+    unsigned char id[1 + MAX_VINT_SIZE]; // prefix type byte followed by varint
+    id[0] = RecordTypes::INODE;
 
+    unsigned int len = 0;
+
+    const auto& reverseMap(walker->reverseMap());
+    for (auto fsReverseMap: reverseMap) {
+      std::string fsID(fsReverseMap.first);
+
+      for (auto inodeMap: fsReverseMap.second) {
+        len = vintEncode(&id[1], inodeMap.first);
+
+        std::string s = bytesAsString(id, &id[1 + len]);
+
+        file << "{ \"id\":\"" << s
+             << "\", \"t\": { \"files\":[";
+
+        bool first = true;
+        for (auto fileID: inodeMap.second) {
+          if (!first) {
+            file << ", ";
+          }
+          file << "\"" << fileID << "\"";
+          first = false;
+        }
+        file << "]}}\n";
+      }
+    }
+    file.close();
+  }
 }
 
 int main(int argc, char *argv[]) {
@@ -182,7 +216,7 @@ int main(int argc, char *argv[]) {
             outputDiskMap(diskMapFile, walker);
           }
           if (vm.count("inode-map-file") && command == "dumpfs") {
-            outputInodeMap(vm, walker);
+            outputInodeMap(inodeMapFile, walker);
           }
           return 0;
         }

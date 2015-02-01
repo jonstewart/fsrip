@@ -47,7 +47,7 @@ conf = Configure(env)
 #optLibs = checkLibs(conf, ['afflib', 'libewf'])
 optLibs = ['libewf', 'z']
 
-ccflags = '-Wall -Wno-trigraphs -Wextra -O1 -g -std=c++11 -Wnon-virtual-dtor -Iinclude'
+ccflags = '-Wall -Wno-trigraphs -Wextra -g -O1 -std=c++11 -Wnon-virtual-dtor -Iinclude'
 
 ccflags += ''.join(' -isystem ' + d for d in filter(p.exists, ['vendors/boost', 'vendors/scope']))
 

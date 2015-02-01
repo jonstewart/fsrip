@@ -12,7 +12,7 @@
 
 #include <iostream>
 
-std::string j(const boost::icl::discrete_interval<uint64>& i) {
+std::string j(const boost::icl::discrete_interval<uint64_t>& i) {
   std::stringstream buf;
   buf << "(" << i.lower() << ", " << i.upper() << ")";
   return buf.str();
@@ -29,16 +29,6 @@ void writeSequence(std::ostream& out, ItType begin, ItType end, const std::strin
   }
 }
 
-std::string bytesAsString(const unsigned char* idBeg, const unsigned char* idEnd) {
-  std::stringstream buf;
-  buf.width(2);
-  buf.fill('0');
-  buf << std::hex;
-  for (const unsigned char* cur = idBeg; cur != idEnd; ++cur) {
-    buf << static_cast<int>(*cur);
-  }
-  return buf.str();
-}
 /*************************************************************************/
 
 std::string appendVarint(const std::string& base, const unsigned int val) {
@@ -46,15 +36,6 @@ std::string appendVarint(const std::string& base, const unsigned int val) {
   auto bytes = vintEncode(encoded, val);
   std::string ret(base);
   ret += bytesAsString(encoded, encoded + bytes);
-  return ret;
-}
-
-std::string makeFileID(const unsigned int level, const std::string& parentID, const int dirIndex) {
-  std::string ret(appendVarint("", level));
-  ret += parentID;
-  if (dirIndex > -1) {
-    ret = appendVarint(ret, dirIndex);
-  }
   return ret;
 }
 
@@ -72,13 +53,20 @@ DirInfo DirInfo::newChild(const std::string &path) {
 }
 
 std::string DirInfo::id() const {
-  std::string ret(appendVarint("", Level));
+  std::string ret(appendVarint("", RecordTypes::FILE));
+  ret = appendVarint(ret, Level);
   ret += BareID;
   return ret;
 }
 
 std::string DirInfo::lastChild() const {
-  return makeFileID(childLevel(), BareID, Count - 1);
+  std::string ret(appendVarint("", RecordTypes::FILE));
+  ret = appendVarint(ret, childLevel());
+  ret += BareID;
+  if (Count > 0) {
+    ret = appendVarint(ret, Count - 1);
+  }
+  return ret;
 }
 
 uint32_t DirInfo::childLevel() const {
@@ -470,24 +458,24 @@ void MetadataWriter::setCurDir(const char* path) {
     // Couldn't find the dir on the stack, so push it on
     // However, since TSK uses depth-first traversal, we'll have seen the entry for the directory immediately prior,
     // so we _MUST NOT_ increment the count on Dirs.back(), because then we'd be double-counting.
-    std::cerr << "new directory " << p << std::endl;
+    // std::cerr << "new directory " << p << std::endl;
     Dirs.emplace_back(Dirs.back().newChild(p));
   }
   else {
     // found it; pop off any children and inc the count
-    std::cerr << "old directory " << p << std::endl;
+    // std::cerr << "old directory " << p << std::endl;
     Dirs.erase(rItr.base(), Dirs.end());
   }
   Dirs.back().incCount();
   if (atFSRootLevel(p)) {
     NumRootEntries[FsID] = Dirs.back().count();
   }
-  std::cerr << "setCurDir(" << path << ") seen, id = " << Dirs.back().id() << ", Count = " << Dirs.back().count()
-    << ", parentID = " << (++Dirs.rbegin() != Dirs.rend() ? (++Dirs.rbegin())->id(): "") << std::endl;
+  // std::cerr << "setCurDir(" << path << ") seen, id = " << Dirs.back().id() << ", Count = " << Dirs.back().count()
+  //   << ", parentID = " << (++Dirs.rbegin() != Dirs.rend() ? (++Dirs.rbegin())->id(): "") << std::endl;
 }
 
 TSK_RETVAL_ENUM MetadataWriter::processFile(TSK_FS_FILE* file, const char* path) {
-  std::cerr << "processFile on " << path << file->name->name << std::endl;
+  // std::cerr << "processFile on " << path << file->name->name << std::endl;
   setCurDir(path);
   // std::cerr << "beginning callback" << std::endl;
   try {
@@ -512,7 +500,6 @@ void MetadataWriter::finishWalk() {
 
 void MetadataWriter::writeMetaRecord(std::ostream& out, const TSK_FS_FILE* file, const TSK_FS_INFO* fs) {
   const TSK_FS_META* i = file->meta;
-
   out << "{"
       << j<int64_t>("addr", static_cast<int64_t>(i->addr), true)
       << j("accessed", formatTimestamp(i->atime, i->atime_nano))
@@ -583,9 +570,10 @@ void MetadataWriter::writeNameRecord(std::ostream& out, const TSK_FS_NAME* n) {
 }
 
 void MetadataWriter::writeFile(std::ostream& out, const TSK_FS_FILE* file) {
-  DirInfo fileDirEnt(Dirs.back().newChild(""));
+  DirInfo     fileDirEnt(Dirs.back().newChild(""));
+  std::string id(fileDirEnt.id());
 
-  out << "{" << j("id", fileDirEnt.id(), true)
+  out << "{" << j("id", id, true)
       << j("parent", Dirs.back().id())
       << j("children", fileDirEnt.lastChild())
       << ", \"t\":{ \"fsmd\":{ ";
@@ -602,6 +590,8 @@ void MetadataWriter::writeFile(std::ostream& out, const TSK_FS_FILE* file) {
   if (m && (m->flags & TSK_FS_META_FLAG_USED)) {
     out << ", \"meta\":";
     writeMetaRecord(out, file, file->fs_info);
+
+    ReverseMap[FsID][file->meta->addr].emplace_back(id);
   }
   out << "} } }";
 }
@@ -636,6 +626,7 @@ void MetadataWriter::writeAttr(std::ostream& out, TSK_INUM_T addr, const TSK_FS_
     uint64_t fo = 0; // file offset
     uint64_t slackFo = 0;
     uint64_t skipBytes = a->nrd.skiplen; // up from 32 bits to 64 for convenience
+    bool first = true;
     for (TSK_FS_ATTR_RUN* curRun = a->nrd.run; curRun; curRun = curRun->next) {
       if (TSK_FS_ATTR_RUN_FLAG_FILLER == curRun->flags) {
         // TO-DO: check on the exact semantics of this flag
@@ -679,7 +670,7 @@ void MetadataWriter::writeAttr(std::ostream& out, TSK_INUM_T addr, const TSK_FS_
         }
       }
       // output data run as json
-      if (curRun != a->nrd.run) {
+      if (!first) {
         out << ", ";
       }
       out << "{"
@@ -688,6 +679,7 @@ void MetadataWriter::writeAttr(std::ostream& out, TSK_INUM_T addr, const TSK_FS_
           << j("len", curRun->len)
           << j("offset", curRun->offset)
           << "}";
+      first = false;
     }
     out << "]";
   }

@@ -2,12 +2,6 @@
 
 #include "walkers.h"
 
-SCOPE_TEST(testMakeFileID) {
-  SCOPE_ASSERT_EQUAL("0000", makeFileID(0, "", 0));
-  SCOPE_ASSERT_EQUAL("0001", makeFileID(0, "", 1));
-  SCOPE_ASSERT_EQUAL("010000", makeFileID(1, "00", 0));
-}
-
 SCOPE_TEST(testDirInfoNewChild) {
   DirInfo gpa;
 
@@ -44,19 +38,19 @@ SCOPE_TEST(testDirInfoNewChild) {
 
   SCOPE_ASSERT_EQUAL(2, dad.count());
 
-  SCOPE_ASSERT_EQUAL("0000", uncle.id());
+  SCOPE_ASSERT_EQUAL("000000", uncle.id());
 
-  SCOPE_ASSERT_EQUAL("010000", cousin.id());
+  SCOPE_ASSERT_EQUAL("00010000", cousin.id());
 
-  SCOPE_ASSERT_EQUAL("0001", dad.id());
+  SCOPE_ASSERT_EQUAL("000001", dad.id());
 
-  SCOPE_ASSERT_EQUAL("010100", me.id());
+  SCOPE_ASSERT_EQUAL("00010100", me.id());
 
-  SCOPE_ASSERT_EQUAL("010101", bro.id());
+  SCOPE_ASSERT_EQUAL("00010101", bro.id());
 
-  SCOPE_ASSERT_EQUAL("0001", gpa.lastChild());
-  SCOPE_ASSERT_EQUAL("010000", uncle.lastChild());
-  SCOPE_ASSERT_EQUAL("010101", dad.lastChild());
+  SCOPE_ASSERT_EQUAL("000001", gpa.lastChild());
+  SCOPE_ASSERT_EQUAL("00010000", uncle.lastChild());
+  SCOPE_ASSERT_EQUAL("00010101", dad.lastChild());
 }
 
 SCOPE_TEST(testMakeUnallocatedDataRun) {

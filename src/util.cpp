@@ -147,3 +147,16 @@ std::string formatTimestamp(uint32_t unix, uint32_t ns) {
   }
   return ret;
 }
+
+std::string bytesAsString(const unsigned char* idBeg, const unsigned char* idEnd) {
+  std::stringstream buf;
+  unsigned short val;
+  for (const unsigned char* cur = idBeg; cur < idEnd; ++cur) {
+    val = *cur;
+    buf.width(2);
+    buf.fill('0');
+    buf << std::hex;
+    buf << val;
+  }
+  return buf.str();
+}
