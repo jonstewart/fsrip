@@ -10,6 +10,7 @@ Copyright (c) 2010 Lightbox Technologies, Inc.
 #include <algorithm>
 #include <string>
 #include <fstream>
+#include <future>
 
 #include <boost/program_options.hpp>
 #include <boost/bind.hpp>
@@ -189,11 +190,15 @@ int main(int argc, char *argv[]) {
         if (0 == walker->start()) {
           walker->startUnallocated();
           walker->finishWalk();
+          std::vector<std::future<void>> futs;
           if (vm.count("disk-map-file") && command == "dumpfs") {
-            outputDiskMap(diskMapFile, walker);
+            futs.emplace_back(std::async(outputDiskMap, diskMapFile, walker));
           }
           if (vm.count("inode-map-file") && command == "dumpfs") {
-            outputInodeMap(inodeMapFile, walker);
+            futs.emplace_back(std::async(outputInodeMap, inodeMapFile, walker));
+          }
+          for (auto& fut: futs) {
+            fut.get();
           }
           return 0;
         }
