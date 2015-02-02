@@ -118,22 +118,16 @@ void outputInodeMap(const std::string& inodeMapFile, std::shared_ptr<LbtTskAuto>
   auto walker(std::dynamic_pointer_cast<MetadataWriter>(w));
   if (walker) {
     std::ofstream file(inodeMapFile, std::ios::out | std::ios::trunc);
-    unsigned char id[1 + MAX_VINT_SIZE]; // prefix type byte followed by varint
-    id[0] = RecordTypes::INODE;
-
-    unsigned int len = 0;
 
     const auto& reverseMap(walker->reverseMap());
     for (auto fsReverseMap: reverseMap) {
-      std::string fsID(fsReverseMap.first);
+      uint32_t volIndex(fsReverseMap.first);
 
       for (auto inodeMap: fsReverseMap.second) {
-        len = vintEncode(&id[1], inodeMap.first);
-
-        std::string s = bytesAsString(id, &id[1 + len]);
+        std::string s = makeInodeID(volIndex, inodeMap.first);
 
         file << "{ \"id\":\"" << s
-             << "\", \"t\": { \"files\":[";
+             << "\", \"t\": { \"hardlinks\":[";
 
         bool first = true;
         for (auto fileID: inodeMap.second) {

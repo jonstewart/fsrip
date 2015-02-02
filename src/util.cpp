@@ -5,6 +5,8 @@
 #include <sstream>
 #include <iomanip>
 
+#include "enums.h"
+
 template<unsigned int N>
 inline void writeBigEndian(const uint64_t val, unsigned char* buf) {
   constexpr unsigned int maskShift = (N - 1) * 8;
@@ -158,5 +160,19 @@ std::string bytesAsString(const unsigned char* idBeg, const unsigned char* idEnd
     buf << std::hex;
     buf << val;
   }
+  return buf.str();
+}
+
+std::string makeInodeID(uint32_t volIndex, uint64_t inum) {
+  std::stringstream buf;
+  buf.width(2);
+  buf.fill('0');
+  buf << std::hex << RecordTypes::INODE;
+  buf.width(2 * sizeof(volIndex));
+  buf.fill('0');
+  buf << std::hex << volIndex;
+  buf.width(2 * sizeof(inum));
+  buf.fill('0');
+  buf << std::hex << inum;
   return buf.str();
 }

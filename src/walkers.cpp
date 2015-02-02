@@ -351,8 +351,8 @@ TSK_FILTER_ENUM MetadataWriter::filterVol(const TSK_VS_PART_INFO* vs_part) {
   std::string partID(buf.str());
 
   Dirs.resize(1);
+  ++NumVols;
   if (!InUnallocated) {
-    ++NumVols;
     TSK_FS_INFO fs; // we'll make image & volume system look like an fs, sort of
                     // fs.partName will be empty, since we're not _in_ a partition
     const TSK_VS_INFO* vs = vs_part->vs;
@@ -376,7 +376,10 @@ TSK_FILTER_ENUM MetadataWriter::filterVol(const TSK_VS_PART_INFO* vs_part) {
     fs.offset = 0;
     fs.orphan_dir = 0;
     fs.root_inum = 1;
+    uint32_t numVols = NumVols;
+    NumVols = 0; // because NumVols is used as the FS index
     setFsInfo(&fs, fs.first_block, fs.first_block + fs.block_count);
+    NumVols = numVols;
 
     DummyFile.fs_info = &fs;
 
@@ -405,7 +408,7 @@ TSK_FILTER_ENUM MetadataWriter::filterFs(TSK_FS_INFO *fs) {
   setFsInfo(fs, Part ? Part->start: 0, Part ? Part->start + Part->len: m_img_info->size / m_img_info->sector_size);
 
   if (InUnallocated) {
-    for (unsigned i = 0; i < NumRootEntries[FsID]; ++i) {
+    for (unsigned i = 0; i < NumRootEntries[NumVols]; ++i) {
       Dirs.back().incCount();
     }
     flushUnallocated();
@@ -434,9 +437,9 @@ void MetadataWriter::setFsInfo(TSK_FS_INFO* fs, uint64_t startSector, uint64_t e
       << "}";
   FsInfo = buf.str();
   Fs = fs; // does not take ownership
-  CurAllocatedItr = AllocatedRuns.find(FsID);
+  CurAllocatedItr = AllocatedRuns.find(NumVols);
   if (AllocatedRuns.end() == CurAllocatedItr) {
-    CurAllocatedItr = AllocatedRuns.insert(std::make_pair(FsID,
+    CurAllocatedItr = AllocatedRuns.insert(std::make_pair(NumVols,
                         std::make_tuple(fs->block_size, startSector, endSector, FsMap{}))).first;
   }
 }
@@ -468,7 +471,7 @@ void MetadataWriter::setCurDir(const char* path) {
   }
   Dirs.back().incCount();
   if (atFSRootLevel(p)) {
-    NumRootEntries[FsID] = Dirs.back().count();
+    NumRootEntries[NumVols] = Dirs.back().count();
   }
   // std::cerr << "setCurDir(" << path << ") seen, id = " << Dirs.back().id() << ", Count = " << Dirs.back().count()
   //   << ", parentID = " << (++Dirs.rbegin() != Dirs.rend() ? (++Dirs.rbegin())->id(): "") << std::endl;
@@ -591,9 +594,15 @@ void MetadataWriter::writeFile(std::ostream& out, const TSK_FS_FILE* file) {
     out << ", \"meta\":";
     writeMetaRecord(out, file, file->fs_info);
 
-    ReverseMap[FsID][file->meta->addr].emplace_back(id);
+    ReverseMap[NumVols][file->meta->addr].emplace_back(id);
+
+    out << "}, \"__link\":\"" << makeInodeID(NumVols, file->meta->addr) << "\"";
   }
-  out << "} } }";
+  else {
+    out << "}";
+  }
+
+  out << " } }";
 }
 
 void MetadataWriter::writeAttr(std::ostream& out, TSK_INUM_T addr, const TSK_FS_ATTR* a) {
@@ -761,12 +770,10 @@ void MetadataWriter::flushUnallocated() {
 
   const unsigned int fieldWidth = std::log10(Fs->block_count) + 1;
 
-  const std::string fsID(bytesAsString(Fs->fs_id, &Fs->fs_id[Fs->fs_id_used]));
-
   TSK_DADDR_T start = (Fs->first_block * Fs->block_size) + Fs->offset;
 
 //  std::cerr << "processing unallocated" << std::endl;
-  const auto& partition = std::get<3>(AllocatedRuns[fsID]);
+  const auto& partition = std::get<3>(AllocatedRuns[NumVols]);
   // iterate over the allocated extents
   // start is the end of the last allocated extent, end is the beginning of the next,
   // so we need to do one more round after the loop completes

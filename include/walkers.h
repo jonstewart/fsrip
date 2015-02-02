@@ -114,10 +114,10 @@ public:
   typedef std::set<AttrRunInfo> AttrSet;
   typedef boost::icl::interval_map<uint64_t, AttrSet> FsMap;
   typedef std::tuple<uint32_t, uint64_t, uint64_t, FsMap> FsMapInfo;
-  typedef std::map<std::string, FsMapInfo> DiskMap;
+  typedef std::map<uint32_t, FsMapInfo> DiskMap; // FS index as key
 
-  // FsID -> inode -> [IDs]
-  typedef std::map<std::string, std::map<uint64_t, std::vector<std::string>>> ReverseInodeMapType;
+  // FS index -> inode -> [IDs]
+  typedef std::map<uint32_t, std::map<uint64_t, std::vector<std::string>>> ReverseInodeMapType;
 
   MetadataWriter(std::ostream& out);
 
@@ -160,8 +160,8 @@ protected:
 
   UNALLOCATED_HANDLING UCMode;
 
-  DiskMap AllocatedRuns; // FS ID->interval->inodes
-  std::map< std::string, unsigned int > NumRootEntries;
+  DiskMap AllocatedRuns; // FS index->interval->inodes
+  std::map<uint32_t, unsigned int> NumRootEntries; // FS index->count
   decltype(AllocatedRuns.begin()) CurAllocatedItr;
 
   ReverseInodeMapType ReverseMap;

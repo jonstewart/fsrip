@@ -12,3 +12,5 @@ std::string formatTimestamp(uint32_t unix, uint32_t ns);
 
 
 std::string bytesAsString(const unsigned char* idBeg, const unsigned char* idEnd);
+
+std::string makeInodeID(uint32_t volIndex, uint64_t inum);
