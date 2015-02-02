@@ -15,6 +15,7 @@ std::string attrFlags(unsigned int flags);
 namespace RecordTypes {
   enum RecordTypes {
     FILE  = 0,
-    INODE = 1
+    INODE = 1,
+    DISK_MAP = 2
   };
 }

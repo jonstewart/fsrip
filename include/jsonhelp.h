@@ -13,19 +13,10 @@ const T* j(const T* x) {
   return x;
 }
 
-template<>
-const std::string& j<std::string>(const std::string& x) {
-  static std::string S; // so evil
-  S = "\"";
-  S += x;
-  S += "\"";
-  return S;
-}
+std::string j(const std::string& x);
 
-template<>
-const char* j(const char* x) {
-  return (j<std::string>(std::string(x))).c_str();
-}
+// template<>
+// std::string j<char>(const char* x);
 
 template<class T>
 class JsonPair {

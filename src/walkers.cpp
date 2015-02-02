@@ -342,7 +342,7 @@ std::string getPartName(const TSK_VS_PART_INFO* vs_part) {
 }
 
 TSK_FILTER_ENUM MetadataWriter::filterVol(const TSK_VS_PART_INFO* vs_part) {
-  PartitionName.clear();
+  VolName.clear();
   Part = vs_part;
 
   std::string partName(getPartName(vs_part));
@@ -398,8 +398,8 @@ TSK_FILTER_ENUM MetadataWriter::filterVol(const TSK_VS_PART_INFO* vs_part) {
     processFile(&DummyFile, "");
 //    std::cerr << "done processing" << std::endl;
   }
-  PartitionName = partName;
-  Dirs.emplace_back(Dirs.back().newChild(PartitionName + "/"));
+  VolName = partName;
+  Dirs.emplace_back(Dirs.back().newChild(VolName + "/"));
   return TSK_FILTER_CONT;
 }
 
@@ -433,7 +433,8 @@ void MetadataWriter::setFsInfo(TSK_FS_INFO* fs, uint64_t startSector, uint64_t e
       << j("byteOffset", fs->offset, true)
       << j("blockSize", fs->block_size)
       << j("fsID", FsID)
-      << j("partName", PartitionName)
+      << j("volName", VolName)
+      << j("volIndex", NumVols)
       << "}";
   FsInfo = buf.str();
   Fs = fs; // does not take ownership
@@ -445,13 +446,13 @@ void MetadataWriter::setFsInfo(TSK_FS_INFO* fs, uint64_t startSector, uint64_t e
 }
 
 bool MetadataWriter::atFSRootLevel(const std::string& path) const {
-  return path.size() == PartitionName.size() + 1 && path.back() == '/';
+  return path.size() == VolName.size() + 1 && path.back() == '/';
 }
 
 void MetadataWriter::setCurDir(const char* path) {
   std::string p;
-  if (!PartitionName.empty()) {
-    p += PartitionName;
+  if (!VolName.empty()) {
+    p += VolName;
     p += "/";
   }
   p += path;

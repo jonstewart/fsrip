@@ -6,6 +6,7 @@
 #include <iomanip>
 
 #include "enums.h"
+#include "jsonhelp.h"
 
 template<unsigned int N>
 inline void writeBigEndian(const uint64_t val, unsigned char* buf) {
@@ -176,3 +177,26 @@ std::string makeInodeID(uint32_t volIndex, uint64_t inum) {
   buf << std::hex << inum;
   return buf.str();
 }
+
+std::string makeDiskMapID(uint64_t offset) {
+  std::stringstream buf;
+  buf.width(2);
+  buf.fill('0');
+  buf << std::hex << RecordTypes::DISK_MAP;
+  buf.width(2 * sizeof(offset));
+  buf.fill('0');
+  buf << offset;
+  return buf.str();
+}
+
+std::string j(const std::string& x) {
+  std::string s("\"");
+  s += x;
+  s += "\"";
+  return s;
+}
+
+// template<>
+// std::string j<char>(const char* x) {
+//   return j(std::string(x));
+// }

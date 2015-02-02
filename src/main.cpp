@@ -18,6 +18,7 @@ Copyright (c) 2010 Lightbox Technologies, Inc.
 #include "walkers.h"
 #include "enums.h"
 #include "util.h"
+#include "jsonhelp.h"
 
 #if defined(__WIN32__) || defined(_WIN32_) || defined(__WIN32) || defined(_WIN32) || defined(WIN32) || defined(__WINDOWS__) || defined(__TOS_WIN__)
   #include <cstdio>
@@ -64,52 +65,34 @@ void outputDiskMap(const std::string& diskMapFile, std::shared_ptr<LbtTskAuto> w
   auto walker(std::dynamic_pointer_cast<MetadataWriter>(w));
   if (walker) {
     std::ofstream file(diskMapFile, std::ios::out | std::ios::trunc);
-    file  << "{ \"size\":" << walker->diskSize()
-          << ", \"sectorSize\":" << walker->sectorSize()
-          << ", \"filesystems\": [\n";
 
     auto map(walker->diskMap());
-    bool firstFs = true;
     for (auto fsMapInfo: map) {
-      if (!firstFs) {
-        file << ",\n";
-      }
-      file  << "{\"fsID\":\"" << fsMapInfo.first
-            << "\", \"blockSize\":" << std::get<0>(fsMapInfo.second)
-            << ", \"begin\":" << std::get<1>(fsMapInfo.second)
-            << ", \"end\":" << std::get<2>(fsMapInfo.second)
-            << ", \"layout\":[\n";
-
       auto layout = std::get<3>(fsMapInfo.second);
-      bool firstFrag = true;
       for (auto frag: layout) {
-        if (!firstFrag) {
-          file << ",\n";
-        }
-        file  << "{\"b\":" << frag.first.lower()
-              << ", \"l\":" << frag.first.upper() - frag.first.lower()
+        file  << "{" << j("id", makeDiskMapID(frag.first.lower()), true)
+              << ",\"t\": { \"i\": { "
+              << j("b", frag.first.lower(), true)
+              << j("l", frag.first.upper() - frag.first.lower())
               << ", \"f\":[";
         bool firstFile = true;
         for (auto f: frag.second) {
           if (!firstFile) {
             file << ", ";
           }
-            //                 addr,     attrID,   slack, drbeg     offset
-
-          file  << "{\"inum\":" << static_cast<int64_t>(std::get<0>(f))
-                << ", \"id\":" << std::get<1>(f)
-                << ", \"s\":" << std::get<2>(f)
-                << ", \"drbeg\":" << std::get<3>(f)
-                << ", \"fo\":" << std::get<4>(f) << "}";
+          file  << "{"
+                << j("vol", fsMapInfo.first, true)
+                << j("inum", static_cast<int64_t>(std::get<0>(f)))
+                << j("attrId", std::get<1>(f))
+                << j("s", std::get<2>(f))
+                << j("drbeg", std::get<3>(f))
+                << j("fo", std::get<4>(f))
+                << "}";
           firstFile = false;
         }
-        file << "]}";
-        firstFrag = false;
+        file << "]}}}\n";
       }
-      file << "\n]}";
-      firstFs = false;
     }
-    file << "\n]}" << std::endl;
     file.close();
   }
 }

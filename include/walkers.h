@@ -148,7 +148,7 @@ protected:
   const TSK_VS_PART_INFO* Part;
   TSK_FS_INFO*      Fs;
 
-  std::string PartitionName;
+  std::string VolName;
 
   uint64_t    NumUnallocated,
               DiskSize;
