@@ -661,17 +661,11 @@ void MetadataWriter::writeAttr(std::ostream& out, TSK_INUM_T addr, const TSK_FS_
           trueSlack = true;
         }
         if (beg < end) { // if false, we're fully into true slack, nothing of file left
-          if (TSK_FS_ATTR_RUN_FLAG_SPARSE == curRun->flags) {
-            // if run is sparse, then underlying data goes to slack stream, so we
-            // advance slackFo. But primary fo must also be advanced, too.
-            markDataRun(beg, end, slackFo, addr, a->id, true);
-            slackFo += (end - beg);
-          }
-          else {
-            // just normal data
+          if (TSK_FS_ATTR_RUN_FLAG_NONE == curRun->flags) {
+            // just normal data; sparse blocks will be made available as unallocated
             markDataRun(beg, end, fo, addr, a->id, false);
           }
-          fo += (end - beg);
+          fo += (end - beg); // advances fo even if data run is sparse, which is critical
         }
         if (trueSlack) {
           // mark slack at end of allocated space
