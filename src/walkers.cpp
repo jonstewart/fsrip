@@ -324,6 +324,7 @@ MetadataWriter::MetadataWriter(std::ostream& out):
 uint8_t MetadataWriter::start() {
   DiskSize = m_img_info->size;
   SectorSize = m_img_info->sector_size;
+  NumVols = 0;
   return LbtTskAuto::start();
 }
 
