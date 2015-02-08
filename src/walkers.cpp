@@ -752,17 +752,20 @@ void MetadataWriter::flushUnallocated() {
 
   // throw out an entry for the folder, and then reset fields for being files
   std::string name = "$Unallocated";
-  DummyName.meta_addr = 0;
+  DummyName.meta_addr = std::numeric_limits<uint64_t>::max();
+  DummyName.meta_seq = 0;
   DummyName.name = DummyName.shrt_name = const_cast<char*>(name.c_str());
   DummyName.name_size = DummyName.shrt_name_size = name.size();
   DummyName.par_addr = Fs->root_inum;
   DummyName.par_seq = 0;
   DummyName.type = TSK_FS_NAME_TYPE_DIR;
-  DummyMeta.flags = TSK_FS_META_FLAG_UNUSED;
+  DummyName.flags = TSK_FS_NAME_FLAG_ALLOC;
+  DummyMeta.flags = TSK_FS_META_FLAG_UNUSED; // will cause meta to be omitted
   processFile(&DummyFile, "");
   DummyName.type = TSK_FS_NAME_TYPE_VIRT;
   DummyName.par_addr = DummyName.meta_addr;
-  DummyMeta.flags = TSK_FS_META_FLAG_USED;
+  DummyMeta.flags = (TSK_FS_META_FLAG_ENUM)(TSK_FS_META_FLAG_USED | TSK_FS_META_FLAG_UNALLOC);
+  DummyMeta.type = TSK_FS_META_TYPE_VIRT;
 
   const unsigned int fieldWidth = std::log10(Fs->block_count) + 1;
 
