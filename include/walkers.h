@@ -151,7 +151,11 @@ protected:
   std::string VolName;
 
   uint64_t    NumUnallocated,
-              DiskSize;
+              DiskSize,
+              PartBeg, // adjusted to fit in disk
+              PartEnd, // adjusted to fit in disk
+              FSBeg, // adjusted to fit in partition & disk
+              FSEnd; // adjusted to fit in partition & disk - 0 <= PartBeg <= FSBeg <= FSEnd <= PartEnd <= DiskSize
   ssize_t     DataWritten;
   uint32_t    SectorSize,
               NumVols;
