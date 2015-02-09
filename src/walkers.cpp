@@ -590,6 +590,22 @@ void MetadataWriter::writeNameRecord(std::ostream& out, const TSK_FS_NAME* n) {
       << "}";
 }
 
+bool typeMatch(const TSK_FS_NAME_TYPE_ENUM n, const TSK_FS_META_TYPE_ENUM m) {
+  // because why have one enum for the type when you can have two different lists
+  // of the same elements?
+  return (n == TSK_FS_NAME_TYPE_FIFO && m == TSK_FS_META_TYPE_FIFO) ||
+         (n == TSK_FS_NAME_TYPE_CHR && m == TSK_FS_META_TYPE_CHR) ||
+         (n == TSK_FS_NAME_TYPE_DIR && m == TSK_FS_META_TYPE_DIR) ||
+         (n == TSK_FS_NAME_TYPE_BLK && m == TSK_FS_META_TYPE_BLK) ||
+         (n == TSK_FS_NAME_TYPE_REG && m == TSK_FS_META_TYPE_REG) ||
+         (n == TSK_FS_NAME_TYPE_LNK && m == TSK_FS_META_TYPE_LNK) ||
+         (n == TSK_FS_NAME_TYPE_SOCK && m == TSK_FS_META_TYPE_SOCK) ||
+         (n == TSK_FS_NAME_TYPE_SHAD && m == TSK_FS_META_TYPE_SHAD) ||
+         (n == TSK_FS_NAME_TYPE_WHT && m == TSK_FS_META_TYPE_WHT) ||
+         (n == TSK_FS_NAME_TYPE_VIRT && m == TSK_FS_META_TYPE_VIRT) ||
+         (n == TSK_FS_NAME_TYPE_UNDEF); // no meta type for this, so give it the pedantic benefit of the doubt
+}
+
 void MetadataWriter::writeFile(std::ostream& out, const TSK_FS_FILE* file) {
   DirInfo     fileDirEnt(Dirs.back().newChild(""));
   std::string id(fileDirEnt.id());
@@ -602,13 +618,17 @@ void MetadataWriter::writeFile(std::ostream& out, const TSK_FS_FILE* file) {
   out << FsInfo
       << j("path", Dirs.back().path());
 
+  TSK_FS_NAME* n = nullptr;
   if (file->name) {
-    TSK_FS_NAME* n = file->name;
+    n = file->name;
     out << ", \"name\":";
     writeNameRecord(out, n);
   }
   TSK_FS_META* m = file->meta;
-  if (m && (m->flags & TSK_FS_META_FLAG_USED)) {
+  if (m && // gotta have a pointer
+     (m->flags & TSK_FS_META_FLAG_USED) && // gotta be legit
+     (!n || n->flags & TSK_FS_NAME_FLAG_ALLOC || typeMatch(n->type, m->type))) // no sense in outputting meta if file's deleted and name and meta types don't match
+  {
     out << ", \"meta\":";
     writeMetaRecord(out, file, file->fs_info);
 
