@@ -172,6 +172,8 @@ protected:
 
   void setCurDir(const char* path);
   void setFsInfo(TSK_FS_INFO* fs, uint64_t startSector, uint64_t endSector);
+  void resetPartitionRange();
+  void setPartitionRange(uint64_t begin, uint64_t end);
 
   void writeFile(std::ostream& out, const TSK_FS_FILE* file);
   void writeNameRecord(std::ostream& out, const TSK_FS_NAME* n);
