@@ -706,7 +706,9 @@ void MetadataWriter::writeAttr(std::ostream& out, TSK_INUM_T addr, const TSK_FS_
         }
         if (trueSlack) {
           // mark slack at end of allocated space
-          markDataRun(end, runEnd, slackFo, addr, a->id, true);
+          if (TSK_FS_ATTR_RUN_FLAG_NONE == curRun->flags) { // but only if not sparse (yes, could have sparse slack)
+            markDataRun(end, runEnd, slackFo, addr, a->id, true);
+          }
           slackFo += (runEnd - end);
         }
       }
