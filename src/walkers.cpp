@@ -692,7 +692,7 @@ void MetadataWriter::writeAttr(std::ostream& out, TSK_INUM_T addr, const TSK_FS_
         skipBytes -= toSkip;
       }
       if (beg < end) { // past skipping, we're onto data
-        uint64_t bytesRemaining = a->size - fo; // how much data left in file stream?
+        uint64_t bytesRemaining = a->nrd.initsize - fo; // how much data left in file stream?
         if (beg + bytesRemaining < end) {
           end = beg + bytesRemaining; // end is now beginning of true slack
           trueSlack = true;
