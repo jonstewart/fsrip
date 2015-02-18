@@ -669,7 +669,7 @@ void MetadataWriter::writeAttr(std::ostream& out, TSK_INUM_T addr, const TSK_FS_
     out << "\"";
   }
 
-  if (a->flags & TSK_FS_ATTR_NONRES && a->nrd.run) {
+  if (a->flags & TSK_FS_ATTR_NONRES) {
     out << ", \"nrd_runs\":[";
     uint64_t fo = 0; // file offset
     uint64_t slackFo = 0;
