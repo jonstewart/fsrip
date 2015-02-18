@@ -761,7 +761,7 @@ void MetadataWriter::prepUnallocatedFile(unsigned int fieldWidth, unsigned int b
   nameRec.name = nameRec.shrt_name = const_cast<char*>(name.c_str());
   nameRec.name_size = nameRec.shrt_name_size = name.size();
 
-  meta.size = attr.size = attr.nrd.allocsize = run.len * blockSize;
+  meta.size = attr.size = attr.nrd.initsize = attr.nrd.allocsize = run.len * blockSize;
 
   nameRec.meta_addr = meta.addr = std::numeric_limits<uint64_t>::max() - run.addr;
 }
@@ -777,6 +777,11 @@ void MetadataWriter::processUnallocatedFragment(TSK_DADDR_T start, TSK_DADDR_T e
       }
     }
     else {
+      // for (TSK_DADDR_T cur = start; cur < end; cur += MaxUnallocatedBlockSize) {
+      //   makeUnallocatedDataRun(cur, std::min(cur + MaxUnallocatedBlockSize, end), DummyAttrRun);
+      //   prepUnallocatedFile(fieldWidth, Fs->block_size, name, DummyAttrRun, DummyAttr, DummyMeta, DummyName);
+      //   processFile(&DummyFile, path.c_str());
+      // }
       makeUnallocatedDataRun(start, end, DummyAttrRun);
       prepUnallocatedFile(fieldWidth, Fs->block_size, name, DummyAttrRun, DummyAttr, DummyMeta, DummyName);
       processFile(&DummyFile, path.c_str());
