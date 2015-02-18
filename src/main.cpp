@@ -11,6 +11,7 @@ Copyright (c) 2010 Lightbox Technologies, Inc.
 #include <string>
 #include <fstream>
 #include <future>
+#include <limits>
 
 #include <boost/program_options.hpp>
 #include <boost/bind.hpp>
@@ -134,6 +135,7 @@ int main(int argc, char *argv[]) {
               volMode,
               inodeMapFile,
               diskMapFile;
+  uint64_t    maxUcBlockSize;
 
   po::options_description desc("Allowed Options");
   po::positional_options_description posOpts;
@@ -144,6 +146,7 @@ int main(int argc, char *argv[]) {
     ("command", po::value< std::string >(&command), "command to perform [info|dumpimg|dumpfs|dumpfiles]")
     ("overview-file", po::value< std::string >(), "output disk overview information")
     ("unallocated", po::value< std::string >(&ucMode)->default_value("none"), "how to handle unallocated [none|fragment|block]")
+    ("max-unallocated-block-size", po::value< uint64_t >(&maxUcBlockSize)->default_value(std::numeric_limits<uint64_t>::max()), "Maximum size of an unallocated entry, in blocks")
     ("ev-files", po::value< std::vector< std::string > >(), "evidence files")
     ("inode-map-file", po::value<std::string>(&inodeMapFile)->default_value(""), "optional file to output containing directory entry to inode map")
     ("disk-map-file", po::value<std::string>(&diskMapFile)->default_value(""), "optional file to output containing disk data to inode map");
@@ -180,6 +183,7 @@ int main(int argc, char *argv[]) {
         walker->setFileFilterFlags((TSK_FS_DIR_WALK_FLAG_ENUM)(TSK_FS_DIR_WALK_FLAG_RECURSE | TSK_FS_DIR_WALK_FLAG_UNALLOC | TSK_FS_DIR_WALK_FLAG_ALLOC));
         if (ucMode == "fragment") {
           walker->setUnallocatedMode(LbtTskAuto::FRAGMENT);
+          walker->setMaxUnallocatedBlockSize(maxUcBlockSize);
         }
         else if (ucMode == "block") {
           walker->setUnallocatedMode(LbtTskAuto::BLOCK);

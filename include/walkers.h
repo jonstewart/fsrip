@@ -50,6 +50,7 @@ public:
   virtual ~LbtTskAuto() {}
 
   virtual void setUnallocatedMode(const UNALLOCATED_HANDLING) {}
+  virtual void setMaxUnallocatedBlockSize(const uint64_t) {}
 
   virtual uint8_t start();
 
@@ -124,6 +125,7 @@ public:
   virtual ~MetadataWriter() {}
 
   virtual void setUnallocatedMode(const UNALLOCATED_HANDLING mode) { UCMode = mode; }
+  virtual void setMaxUnallocatedBlockSize(const uint64_t maxBlocks) { MaxUnallocatedBlockSize = maxBlocks; }
 
   virtual uint8_t start();
 
@@ -155,7 +157,8 @@ protected:
               PartBeg, // adjusted to fit in disk
               PartEnd, // adjusted to fit in disk
               FSBeg, // adjusted to fit in partition & disk
-              FSEnd; // adjusted to fit in partition & disk - 0 <= PartBeg <= FSBeg <= FSEnd <= PartEnd <= DiskSize
+              FSEnd, // adjusted to fit in partition & disk - 0 <= PartBeg <= FSBeg <= FSEnd <= PartEnd <= DiskSize
+              MaxUnallocatedBlockSize;
   ssize_t     DataWritten;
   uint32_t    SectorSize,
               NumVols;
