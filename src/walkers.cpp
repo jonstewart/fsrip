@@ -389,7 +389,7 @@ TSK_FILTER_ENUM MetadataWriter::filterVol(const TSK_VS_PART_INFO* vs_part) {
     DummyAttrRun.addr = vs_part->start;
     DummyAttrRun.len = vs_part->len;
     DummyAttrRun.offset = 0;
-    DummyMeta.size = DummyAttr.size = DummyAttr.nrd.allocsize = DummyAttrRun.len * fs.block_size;
+    DummyMeta.size = DummyAttr.size = DummyAttr.nrd.initsize = DummyAttr.nrd.allocsize = DummyAttrRun.len * fs.block_size;
     
     DummyName.meta_addr = DummyMeta.addr = NumVols;
 
