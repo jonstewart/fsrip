@@ -586,6 +586,8 @@ void MetadataWriter::writeNameRecord(std::ostream& out, const TSK_FS_NAME* n) {
       << j<int64_t>("meta_addr", static_cast<int64_t>(n->meta_addr))
       << j("meta_seq", n->meta_seq)
       << j("name", (n->name && n->name_size ? std::string(n->name): ""))
+      << j("par_addr", n->par_addr)
+      << j("par_seq", n->par_seq)
       << j("shrt_name", (n->shrt_name && n->shrt_name_size ? std::string(n->shrt_name): ""))
       << j("type", nameType(n->type))
       << "}";
