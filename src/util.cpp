@@ -135,6 +135,31 @@ unsigned int vintDecode(uint64_t& val, const unsigned char* buf) {
   }
 }
 
+std::string appendVarint(const std::string& base, const unsigned int val) {
+  unsigned char encoded[9];
+  auto bytes = vintEncode(encoded, val);
+  std::string ret(base);
+  ret += bytesAsString(encoded, encoded + bytes);
+  return ret;
+}
+
+std::string makeChildID(const unsigned char* parentID, unsigned int len, unsigned int childIndex) {
+  std::string ret;
+  if (len > 1) {
+    ret += "00";
+    uint64_t level;
+    unsigned int levelLength = vintDecode(level, &parentID[1]);
+    if (1 + levelLength > len) {
+      return "";
+    }
+    ++level;
+    ret = appendVarint(ret, level);
+    ret += bytesAsString(&parentID[1 + levelLength], &parentID[len]);
+    ret += appendVarint(ret, childIndex);
+  }  
+  return ret;
+}
+
 std::string formatTimestamp(uint32_t unix, uint32_t ns) {
   std::string ret;
   time_t ts = unix;

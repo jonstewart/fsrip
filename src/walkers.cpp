@@ -31,14 +31,6 @@ void writeSequence(std::ostream& out, ItType begin, ItType end, const std::strin
 
 /*************************************************************************/
 
-std::string appendVarint(const std::string& base, const unsigned int val) {
-  unsigned char encoded[9];
-  auto bytes = vintEncode(encoded, val);
-  std::string ret(base);
-  ret += bytesAsString(encoded, encoded + bytes);
-  return ret;
-}
-
 DirInfo::DirInfo():
   Path(""), BareID(""), Level(0), Count(0) {}
 
