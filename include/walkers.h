@@ -181,7 +181,7 @@ protected:
   void writeFile(std::ostream& out, const TSK_FS_FILE* file);
   void writeNameRecord(std::ostream& out, const TSK_FS_NAME* n);
   void writeMetaRecord(std::ostream& out, const TSK_FS_FILE* file, const TSK_FS_INFO* fs);
-  void writeAttr(std::ostream& out, TSK_INUM_T addr, const TSK_FS_META* m, const TSK_FS_ATTR* attr);
+  void writeAttr(std::ostream& out, TSK_INUM_T addr, const TSK_FS_ATTR* attr);
 
   void markDataRun(uint64_t beg, uint64_t end, uint64_t offset, TSK_INUM_T addr, uint32_t attrID, bool slack);
 

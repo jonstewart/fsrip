@@ -547,7 +547,7 @@ void MetadataWriter::writeMetaRecord(std::ostream& out, const TSK_FS_FILE* file,
         if (lastAttr != 0) {
           out << ", ";
         }
-        writeAttr(out, i->addr, i, a);
+        writeAttr(out, i->addr, a);
         lastAttr = a;
       }
     }
@@ -562,7 +562,7 @@ void MetadataWriter::writeMetaRecord(std::ostream& out, const TSK_FS_FILE* file,
           if (num > 0) {
             out << ", ";
           }
-          writeAttr(out, i->addr, i, a);
+          writeAttr(out, i->addr, a);
           ++num;
         }
       }
@@ -638,7 +638,7 @@ void MetadataWriter::writeFile(std::ostream& out, const TSK_FS_FILE* file) {
   out << " } }";
 }
 
-void MetadataWriter::writeAttr(std::ostream& out, TSK_INUM_T addr, const TSK_FS_META* m, const TSK_FS_ATTR* a) {
+void MetadataWriter::writeAttr(std::ostream& out, TSK_INUM_T addr, const TSK_FS_ATTR* a) {
   out << "{"
       << j("flags", attrFlags(a->flags), true)
       << j("id", a->id)
@@ -668,7 +668,7 @@ void MetadataWriter::writeAttr(std::ostream& out, TSK_INUM_T addr, const TSK_FS_
     uint64_t fo = 0; // file offset
     uint64_t slackFo = 0;
     uint64_t skipBytes = a->nrd.skiplen; // up from 32 bits to 64 for convenience
-    const uint64_t mainSize  = (m->flags & TSK_FS_META_FLAG_COMP) ? a->nrd.allocsize: a->nrd.initsize;
+    const uint64_t mainSize  = (a->flags & TSK_FS_ATTR_COMP) ? a->nrd.allocsize: a->nrd.initsize;
     // if (addr == 3240) {
     //   std::cerr << "mainSize = " << mainSize << "\n";
     // }
@@ -686,7 +686,6 @@ void MetadataWriter::writeAttr(std::ostream& out, TSK_INUM_T addr, const TSK_FS_
       // if (addr == 3240) {
       //   std::cerr << "beg = " << beg << ", end = " << end << ", len = " << (end - beg) << ", fo = " << fo << ", slackFo = " << slackFo << "\n";
       // }
-
       // if skipping, advance beg and decrement skipBytes accordingly
       if (skipBytes > 0) { // still towards beginning where skiplen is > 0
         uint64_t toSkip = std::min(end - beg, skipBytes);
