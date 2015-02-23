@@ -136,7 +136,7 @@ std::ostream& operator<<(std::ostream& out, const Image& img) {
   // std::cerr << "heyo" << std::endl;
 
   if (std::shared_ptr<VolumeSystem> vs = img.volumeSystem().lock()) {
-    out << "," << j("volumeSystem") << ":{"
+    out << "," << j(std::string("volumeSystem")) << ":{"
         << j("type", vs->type(), true)
         << j("description", vs->desc())
         << j("blockSize", vs->blockSize())
@@ -181,7 +181,7 @@ uint8_t ImageInfo::start() {
   // std::cerr << "heyo" << std::endl;
 
   if (std::shared_ptr<VolumeSystem> vs = img->volumeSystem().lock()) {
-    Out << "," << j("volumeSystem") << ":{"
+    Out << "," << j(std::string("volumeSystem")) << ":{"
         << j("type", vs->type(), true)
         << j("description", vs->desc())
         << j("blockSize", vs->blockSize())
