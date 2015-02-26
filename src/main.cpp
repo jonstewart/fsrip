@@ -63,7 +63,7 @@ std::shared_ptr<LbtTskAuto> createVisitor(const std::string& cmd, std::ostream& 
 }
 
 void outputDiskMap(const std::string& diskMapFile, std::shared_ptr<LbtTskAuto> w) {
-  std::cerr << "outputDiskMap" << std::endl;
+  // std::cerr << "outputDiskMap" << std::endl;
   auto walker(std::dynamic_pointer_cast<MetadataWriter>(w));
   if (walker) {
     std::ofstream file(diskMapFile, std::ios::out | std::ios::trunc);
