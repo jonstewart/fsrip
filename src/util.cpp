@@ -169,8 +169,19 @@ std::string formatTimestamp(uint32_t unix, uint32_t ns) {
   if (len) {
     ret.append(tbuf);
     std::stringstream buf;
+    buf.setf(std::ios::fixed, std::ios::floatfield);
+    buf.precision(8);
     buf << double(ns)/1000000000;
-    ret.append(buf.str().erase(0, 1));
+    std::string frac = buf.str();
+    frac.erase(0, 1); // leading 0
+    std::string::iterator zeroItr(frac.end());
+    --zeroItr;
+    while (zeroItr != frac.begin() && *zeroItr == '0') {
+      --zeroItr;
+    }
+    ++zeroItr;
+    frac.erase(zeroItr, frac.end());
+    ret.append(frac);
     ret.append("Z");
   }
   return ret;
