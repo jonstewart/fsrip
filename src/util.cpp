@@ -168,20 +168,22 @@ std::string formatTimestamp(uint32_t unix, uint32_t ns) {
   size_t len = strftime(tbuf, 100, "%FT%T", tmPtr);
   if (len) {
     ret.append(tbuf);
-    std::stringstream buf;
-    buf.setf(std::ios::fixed, std::ios::floatfield);
-    buf.precision(8);
-    buf << double(ns)/1000000000;
-    std::string frac = buf.str();
-    frac.erase(0, 1); // leading 0
-    std::string::iterator zeroItr(frac.end());
-    --zeroItr;
-    while (zeroItr != frac.begin() && *zeroItr == '0') {
+    if (ns) {
+      std::stringstream buf;
+      buf.setf(std::ios::fixed, std::ios::floatfield);
+      buf.precision(8);
+      buf << double(ns)/1000000000;
+      std::string frac = buf.str();
+      frac.erase(0, 1); // leading 0
+      std::string::iterator zeroItr(frac.end());
       --zeroItr;
+      while (zeroItr != frac.begin() && *zeroItr == '0') {
+        --zeroItr;
+      }
+      ++zeroItr;
+      frac.erase(zeroItr, frac.end()); // kill trailing zeroes
+      ret.append(frac);
     }
-    ++zeroItr;
-    frac.erase(zeroItr, frac.end());
-    ret.append(frac);
     ret.append("Z");
   }
   return ret;
