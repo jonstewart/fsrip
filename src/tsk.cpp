@@ -1,8 +1,5 @@
 /*
-src/deacon/tsk.cpp
-
-Created by Jon Stewart on 2010-01-06.
-Copyright (c) 2010 Lightbox Technologies, Inc. All rights reserved.
+Copyright (c) 2010-2015, Stroz Friedberg, LLC
 */
 
 #include "tsk.h"

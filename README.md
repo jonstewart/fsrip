@@ -1,7 +1,7 @@
 fsrip
 =====
 
-Copyright 2010-2012, Lightbox Technologies, Inc
+Copyright 2010-2015, Stroz Friedberg, LLC
 
 About:
 ------
@@ -99,7 +99,7 @@ and you can then run fsrip like so:
 
     ./build/src/fsrip --help
 
-    fsrip, Copyright (c) 2010-2012, Lightbox Technologies, Inc.
+    fsrip, Copyright (c) 2010-2015, Stroz Friedberg, LLC
     Built Oct 25 2012
     TSK version is 4.0.0
     Allowed Options:

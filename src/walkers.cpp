@@ -1,3 +1,7 @@
+/*
+Copyright (c) 2010-2015, Stroz Friedberg, LLC
+*/
+
 #include "walkers.h"
 
 #include "jsonhelp.h"

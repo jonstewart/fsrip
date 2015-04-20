@@ -2,7 +2,7 @@
 src/main.cpp
 
 Created by Jon Stewart on 2010-01-04.
-Copyright (c) 2010 Lightbox Technologies, Inc.
+Copyright (c) 2010-2015, Stroz Friedberg, LLC
 */
 
 #include <iostream>
@@ -38,7 +38,7 @@ Copyright (c) 2010 Lightbox Technologies, Inc.
 namespace po = boost::program_options;
 
 void printHelp(const po::options_description& desc) {
-  std::cout << "fsrip, Copyright (c) 2010-2012, Lightbox Technologies, Inc." << std::endl;
+  std::cout << "fsrip, Copyright (c) 2010-2015, Stroz Friedberg, LLC" << std::endl;
   std::cout << "Built " << __DATE__ << std::endl;
   std::cout << "TSK version is " << tsk_version_get_str() << std::endl;
   std::cout << desc << std::endl;

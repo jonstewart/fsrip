@@ -1,3 +1,7 @@
+/*
+Copyright (c) 2010-2015, Stroz Friedberg, LLC
+*/
+
 #include "util.h"
 
 #include <iostream>

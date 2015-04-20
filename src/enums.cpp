@@ -1,3 +1,7 @@
+/*
+Copyright (c) 2010-2015, Stroz Friedberg, LLC
+*/
+
 #include "enums.h"
 
 #include <vector>
