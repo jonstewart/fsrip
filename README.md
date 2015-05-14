@@ -66,13 +66,16 @@ this output.
 
 ### Dependencies:
 
-fsrip depends on the [Boost C++ library](http://www.boost.org) and the 
-[Sleuthkit](http://www.sleuthkit.org), and uses [SCons](http://www.scons.org)
-as a build tool. The build script will also build fsrip with [libewf]
-(http://sourceforge.net/projects/libewf/) and [afflib]
-(http://digitalcorpora.org/downloads/) support, though these are technically 
-optional dependencies. libewf and afflib have their own dependencies, the most
-notable being zlib and libcrypto.
+fsrip depends on the [Boost C++ library](http://www.boost.org) the 
+[Sleuthkit](http://www.sleuthkit.org), and [Scope](https://github.com/jonstewart/scope). 
+It uses [SCons](http://www.scons.org) as a build tool. The build script will 
+also build fsrip with [libewf] (http://sourceforge.net/projects/libewf/) and 
+[afflib](http://digitalcorpora.org/downloads/) support, though these are 
+technically optional dependencies. libewf and afflib have their own 
+dependencies, the most notable being zlib and libcrypto. Prior to building 
+fsrip, you must clone the Scope repository and create a symlink from the `scope` 
+directory into `fsrip\vendors\` 
+(e.g. `~\projects\scope\` -> `~\projects\fsrip\vendors\scope`).
 
 You can then build fsrip by typing:
 
