@@ -151,7 +151,7 @@ std::string makeChildID(const unsigned char* parentID, unsigned int len, unsigne
   std::string ret;
   if (len > 1) {
     ret += "00";
-    uint64_t level;
+    uint64_t level = 0;
     unsigned int levelLength = vintDecode(level, &parentID[1]);
     if (1 + levelLength > len) {
       return "";
