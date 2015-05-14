@@ -1,7 +1,0 @@
-Import('env', 'optLibs')
-libs = ['tsk']
-libs.extend(optLibs)
-test_src = Glob('*.cpp')
-test_src.extend(['#/src/util.cpp', '#/src/walkers.cpp', '#/src/tsk.cpp', '#/src/enums.cpp'])
-ret = env.Program('test', test_src, LIBS=libs)
-Return('ret')

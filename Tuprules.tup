@@ -1,0 +1,9 @@
+ROOT = $(TUP_CWD)
+
+CPPFLAGS += @(X_CPPFLAGS) @(BOOST_CPPFLAGS) -I$(ROOT)/include
+CXXFLAGS += @(X_CXXFLAGS) @(BOOST_CXXFLAGS)
+LDFLAGS += @(X_LDFLAGS) @(STDCXX_LIB) @(BOOST_LDFLAGS) -ltsk -lewf -lboost_program_options
+
+!cxx = |> @(CXX) $(CPPFLAGS) $(CXXFLAGS) -c %f -o %o |> %B.o
+!staticlib = |> ar crs %o %f |>
+!link = |> @(CXX) -o %o %f $(LDFLAGS) |>

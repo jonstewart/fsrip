@@ -1,0 +1,4 @@
+include_rules
+
+: foreach *.cpp |> !cxx |>
+: *.o ../lib/libfsrip.a |> !link |> fsrip

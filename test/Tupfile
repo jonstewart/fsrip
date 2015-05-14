@@ -1,0 +1,6 @@
+include_rules
+
+CPPFLAGS += @(SCOPE_CPPFLAGS)
+
+: foreach *.cpp |> !cxx |>
+: *.o ../src/lib/libfsrip.a |> !link |> test

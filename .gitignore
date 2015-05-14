@@ -10,3 +10,16 @@ DesignTimeResolveAssemblyReferencesInput.cache
 *.pdb
 *.exe.manifest
 *.FileListAbsolute.txt
+.tup
+build/*
+configure
+Makefile
+Makefile.in
+config.h
+config.h.in
+config.status
+config.log
+config/*
+aclocal.m4
+autom4te.cache/*
+stamp-h1
