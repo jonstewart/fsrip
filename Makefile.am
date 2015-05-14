@@ -2,6 +2,6 @@ all-local:
 	tup upd
 
 clean-local:
-	rm -f src/main src/*.o
+	rm -Rf build/src/* build/test/*
 
 .PHONY: all clean
