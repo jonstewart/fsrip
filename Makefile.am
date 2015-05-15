@@ -4,4 +4,7 @@ all-local:
 clean-local:
 	rm -Rf build/src/* build/test/*
 
+check-local:
+	./build/test/test
+
 .PHONY: all clean
