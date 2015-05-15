@@ -2,3 +2,7 @@ include_rules
 
 : foreach *.cpp |> !cxx |>
 : *.o |> !staticlib |> libfsrip.a
+
+CXXFLAGS += @(DL_CXXFLAGS)
+: foreach *.cpp |> !cxx |> %B.os
+: *.os |> !dylib |> @(DL_PREFIX)fsrip.@(DL_EXT)

@@ -5,5 +5,9 @@ CXXFLAGS += @(X_CXXFLAGS) @(BOOST_CXXFLAGS)
 LDFLAGS += @(X_LDFLAGS) @(STDCXX_LIB) @(BOOST_LDFLAGS) -ltsk -lewf -lboost_program_options
 
 !cxx = |> @(CXX) $(CPPFLAGS) $(CXXFLAGS) -c %f -o %o |> %B.o
+
 !staticlib = |> ar crs %o %f |>
+
+!dylib =|> @(CXX) -o %o %f $(LDFLAGS) @(DL_LDFLAGS) |>
+
 !link = |> @(CXX) -o %o %f $(LDFLAGS) |>

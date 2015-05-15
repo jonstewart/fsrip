@@ -188,12 +188,33 @@ if test "x$scope_ok" != "xyes"; then
   AC_MSG_WARN([])
 fi
 
+
 ###########################################################################
+#
+# Shared Libraries
+#       or
+# How You Can Replace Libtool With 15 Lines of Autoconf
+# That's Executed Only Once
+#
+DL_CXXFLAGS="-fPIC"
+DL_LDFLAGS="-shared -rdynamic -fPIC"
+
+case "$host" in
+*-*-mingw*)
+  DL_PREFIX=""
+  DL_EXT="dll"
+  ;;
+*-apple-darwin*)
+  DL_PREFIX="lib"
+  DL_EXT="dylib"
+  ;;
+*)
+  DL_PREFIX="lib"
+  DL_EXT="so"
+esac
 
 
-
-
-
+###########################################################################
 #
 # Threading
 # 
@@ -218,7 +239,11 @@ esac
 AC_SUBST([X_CPPFLAGS])
 AC_SUBST([X_CXXFLAGS])
 AC_SUBST([X_LDFLAGS])
- 
+AC_SUBST([DL_PREFIX])
+AC_SUBST([DL_EXT])
+AC_SUBST([DL_CXXFLAGS])
+AC_SUBST([DL_LDFLAGS])
+
 
 # C++ library
 #
