@@ -129,13 +129,75 @@ void outputInodeMap(const std::string& inodeMapFile, std::shared_ptr<LbtTskAuto>
   }
 }
 
+struct Options {
+  std::string Command,
+              UCMode,
+              VolMode,
+              OverviewFile,
+              InodeMapFile,
+              DiskMapFile;
+  uint64_t    MaxUcBlockSize;
+};
+
+int process(std::shared_ptr<LbtTskAuto> walker, const std::vector< std::string >&  imgSegs, const po::variables_map& vm, const Options& opts) {
+  // convert to C string array
+  boost::scoped_array< const char* >  segments(new const char*[imgSegs.size()]);
+  for (unsigned int i = 0; i < imgSegs.size(); ++i) {
+    segments[i] = imgSegs[i].c_str();
+  }
+  if (0 == walker->openImageUtf8(imgSegs.size(), segments.get(), TSK_IMG_TYPE_DETECT, 0)) {
+    if (!opts.OverviewFile.empty()) {
+      std::ofstream file(opts.OverviewFile.c_str(), std::ios::out);
+      file << *(walker->getImage(imgSegs));
+      file.close();
+    }
+
+    walker->setVolFilterFlags((TSK_VS_PART_FLAG_ENUM)(TSK_VS_PART_FLAG_ALLOC | TSK_VS_PART_FLAG_UNALLOC | TSK_VS_PART_FLAG_META));
+    walker->setFileFilterFlags((TSK_FS_DIR_WALK_FLAG_ENUM)(TSK_FS_DIR_WALK_FLAG_RECURSE | TSK_FS_DIR_WALK_FLAG_UNALLOC | TSK_FS_DIR_WALK_FLAG_ALLOC));
+    if (opts.UCMode == "fragment") {
+      walker->setUnallocatedMode(LbtTskAuto::FRAGMENT);
+      walker->setMaxUnallocatedBlockSize(opts.MaxUcBlockSize);
+    }
+    else if (opts.UCMode == "block") {
+      walker->setUnallocatedMode(LbtTskAuto::BLOCK);
+    }
+    else {
+      walker->setUnallocatedMode(LbtTskAuto::NONE);
+    }
+    if (0 == walker->start()) {
+      walker->startUnallocated();
+      walker->finishWalk();
+      std::vector<std::future<void>> futs;
+      if (vm.count("disk-map-file") && opts.Command == "dumpfs") {
+        futs.emplace_back(std::async(outputDiskMap, opts.DiskMapFile, walker));
+      }
+      if (vm.count("inode-map-file") && opts.Command == "dumpfs") {
+        futs.emplace_back(std::async(outputInodeMap, opts.InodeMapFile, walker));
+      }
+      for (auto& fut: futs) {
+        fut.get();
+      }
+      return 0;
+    }
+    else {
+      std::cout.flush();
+      std::cerr << "Had an error parsing filesystem" << std::endl;
+      for (auto& err: walker->getErrorList()) {
+        std::cerr << err.msg1 << " " << err.msg2 << std::endl;
+      }
+    }
+  }
+  else {
+    std::cerr << "Had an error opening the evidence file" << std::endl;
+    for (unsigned int i = 0; i < imgSegs.size(); ++i) {
+      std::cerr << " ** seg[" << i << "] = " << imgSegs[i] << std::endl;
+    }
+  }
+  return 1;
+}
+
 int main(int argc, char *argv[]) {
-  std::string command,
-              ucMode,
-              volMode,
-              inodeMapFile,
-              diskMapFile;
-  uint64_t    maxUcBlockSize;
+  Options opts;
 
   po::options_description desc("Allowed Options");
   po::positional_options_description posOpts;
@@ -143,13 +205,13 @@ int main(int argc, char *argv[]) {
   posOpts.add("ev-files", -1);
   desc.add_options()
     ("help", "produce help message")
-    ("command", po::value< std::string >(&command), "command to perform [info|dumpimg|dumpfs|dumpfiles]")
-    ("overview-file", po::value< std::string >(), "output disk overview information")
-    ("unallocated", po::value< std::string >(&ucMode)->default_value("none"), "how to handle unallocated [none|fragment|block]")
-    ("max-unallocated-block-size", po::value< uint64_t >(&maxUcBlockSize)->default_value(std::numeric_limits<uint64_t>::max()), "Maximum size of an unallocated entry, in blocks")
+    ("command", po::value< std::string >(&opts.Command), "command to perform [info|dumpimg|dumpfs|dumpfiles]")
+    ("overview-file", po::value< std::string >(&opts.OverviewFile), "output disk overview information")
+    ("unallocated", po::value< std::string >(&opts.UCMode)->default_value("none"), "how to handle unallocated [none|fragment|block]")
+    ("max-unallocated-block-size", po::value< uint64_t >(&opts.MaxUcBlockSize)->default_value(std::numeric_limits<uint64_t>::max()), "Maximum size of an unallocated entry, in blocks")
     ("ev-files", po::value< std::vector< std::string > >(), "evidence files")
-    ("inode-map-file", po::value<std::string>(&inodeMapFile)->default_value(""), "optional file to output containing directory entry to inode map")
-    ("disk-map-file", po::value<std::string>(&diskMapFile)->default_value(""), "optional file to output containing disk data to inode map");
+    ("inode-map-file", po::value<std::string>(&opts.InodeMapFile)->default_value(""), "optional file to output containing directory entry to inode map")
+    ("disk-map-file", po::value<std::string>(&opts.DiskMapFile)->default_value(""), "optional file to output containing disk data to inode map");
 
   po::variables_map vm;
   try {
@@ -165,62 +227,10 @@ int main(int argc, char *argv[]) {
     if (vm.count("help")) {
       printHelp(desc);
     }
-    else if (vm.count("command") && vm.count("ev-files") && (walker = createVisitor(command, std::cout, imgSegs))) {
+    else if (vm.count("command") && vm.count("ev-files") && (walker = createVisitor(opts.Command, std::cout, imgSegs))) {
       std_binary_io();
 
-      boost::scoped_array< const char* >  segments(new const char*[imgSegs.size()]);
-      for (unsigned int i = 0; i < imgSegs.size(); ++i) {
-        segments[i] = imgSegs[i].c_str();
-      }
-      if (0 == walker->openImageUtf8(imgSegs.size(), segments.get(), TSK_IMG_TYPE_DETECT, 0)) {
-        if (vm.count("overview-file")) {
-          std::ofstream file(vm["overview-file"].as<std::string>().c_str(), std::ios::out);
-          file << *(walker->getImage(imgSegs));
-          file.close();
-        }
-
-        walker->setVolFilterFlags((TSK_VS_PART_FLAG_ENUM)(TSK_VS_PART_FLAG_ALLOC | TSK_VS_PART_FLAG_UNALLOC | TSK_VS_PART_FLAG_META));
-        walker->setFileFilterFlags((TSK_FS_DIR_WALK_FLAG_ENUM)(TSK_FS_DIR_WALK_FLAG_RECURSE | TSK_FS_DIR_WALK_FLAG_UNALLOC | TSK_FS_DIR_WALK_FLAG_ALLOC));
-        if (ucMode == "fragment") {
-          walker->setUnallocatedMode(LbtTskAuto::FRAGMENT);
-          walker->setMaxUnallocatedBlockSize(maxUcBlockSize);
-        }
-        else if (ucMode == "block") {
-          walker->setUnallocatedMode(LbtTskAuto::BLOCK);
-        }
-        else {
-          walker->setUnallocatedMode(LbtTskAuto::NONE);
-        }
-        if (0 == walker->start()) {
-          walker->startUnallocated();
-          walker->finishWalk();
-          std::vector<std::future<void>> futs;
-          if (vm.count("disk-map-file") && command == "dumpfs") {
-            futs.emplace_back(std::async(outputDiskMap, diskMapFile, walker));
-          }
-          if (vm.count("inode-map-file") && command == "dumpfs") {
-            futs.emplace_back(std::async(outputInodeMap, inodeMapFile, walker));
-          }
-          for (auto& fut: futs) {
-            fut.get();
-          }
-          return 0;
-        }
-        else {
-          std::cout.flush();
-          std::cerr << "Had an error parsing filesystem" << std::endl;
-          for (auto& err: walker->getErrorList()) {
-            std::cerr << err.msg1 << " " << err.msg2 << std::endl;
-          }
-        }
-      }
-      else {
-        std::cerr << "Had an error opening the evidence file" << std::endl;
-        for (unsigned int i = 0; i < imgSegs.size(); ++i) {
-          std::cerr << " ** seg[" << i << "] = " << imgSegs[i] << std::endl;
-        }
-        return 1;
-      }
+      return process(walker, imgSegs, vm, opts);
     }
     else {
       std::cerr << "Error: did not understand arguments\n\n";
