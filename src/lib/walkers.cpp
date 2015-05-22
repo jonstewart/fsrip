@@ -32,7 +32,6 @@ void writeSequence(std::ostream& out, ItType begin, ItType end, const std::strin
     }
   }
 }
-
 /*************************************************************************/
 
 DirInfo::DirInfo():
@@ -445,7 +444,7 @@ void MetadataWriter::setFsInfo(TSK_FS_INFO* fs, uint64_t startSector, uint64_t e
   CurAllocatedItr = AllocatedRuns.find(NumVols);
   if (AllocatedRuns.end() == CurAllocatedItr) {
     CurAllocatedItr = AllocatedRuns.insert(std::make_pair(NumVols,
-                        std::make_tuple(fs->block_size, startSector, endSector, FsMap{}))).first;
+                        FsMapInfo{fs->block_size, startSector, endSector, FsMap{}})).first;
   }
 }
 
@@ -741,7 +740,7 @@ void MetadataWriter::markDataRun(uint64_t beg, uint64_t end, uint64_t offset, TS
   beg = std::max(beg, FSBeg); // just in case
   end = std::min(end, FSEnd);
   if (beg < end) {
-    std::get<3>(CurAllocatedItr->second) += std::make_pair(
+    CurAllocatedItr->second.Runs += std::make_pair(
       boost::icl::discrete_interval<uint64_t>::right_open(beg, end),
       AttrSet{{AttrRunInfo{addr, attrID, slack, beg, offset}}}
     );
@@ -826,7 +825,7 @@ void MetadataWriter::flushUnallocated() {
   TSK_DADDR_T start = (Fs->first_block * Fs->block_size) + Fs->offset;
 
 //  std::cerr << "processing unallocated" << std::endl;
-  const auto& partition = std::get<3>(AllocatedRuns[NumVols]);
+  const auto& partition = AllocatedRuns[NumVols].Runs;
   // iterate over the allocated extents
   // start is the end of the last allocated extent, end is the beginning of the next,
   // so we need to do one more round after the loop completes

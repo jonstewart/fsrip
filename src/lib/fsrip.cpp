@@ -72,7 +72,7 @@ void outputDiskMap(const std::string& diskMapFile, std::shared_ptr<LbtTskAuto> w
 
     auto map(walker->diskMap());
     for (auto fsMapInfo: map) {
-      auto layout = std::get<3>(fsMapInfo.second);
+      auto layout = fsMapInfo.second.Runs;
       for (auto frag: layout) {
         file  << "{" << j("id", makeDiskMapID(frag.first.lower()), true)
               << ",\"t\": { \"i\": { "
@@ -86,11 +86,11 @@ void outputDiskMap(const std::string& diskMapFile, std::shared_ptr<LbtTskAuto> w
           }
           file  << "{"
                 << j("vol", fsMapInfo.first, true)
-                << j("inum", static_cast<int64_t>(std::get<0>(f)))
-                << j("attrId", std::get<1>(f))
-                << j("s", std::get<2>(f))
-                << j("drbeg", std::get<3>(f))
-                << j("fo", std::get<4>(f))
+                << j("inum", static_cast<int64_t>(f.Inum))
+                << j("attrId", f.AttrID)
+                << j("s", f.Slack)
+                << j("drbeg", f.DRBeg)
+                << j("fo", f.Offset)
                 << "}";
           firstFile = false;
         }

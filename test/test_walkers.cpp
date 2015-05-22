@@ -64,3 +64,20 @@ SCOPE_TEST(testMakeUnallocatedDataRun) {
   SCOPE_ASSERT_EQUAL(10, extent.len);
   SCOPE_ASSERT_EQUAL(0, extent.offset);
 }
+
+SCOPE_TEST(testAttrRunInfoSort) {
+  // tests that AttrRunInfo::operator< is correct
+  std::set<AttrRunInfo> set;
+  auto first  = set.insert(AttrRunInfo{3155, 6, false, 62275072, 17694720}).first;
+  auto second = set.insert(AttrRunInfo{3240, 0, false, 62275072, 978944}).first;
+
+  SCOPE_ASSERT(set.begin() == first);
+
+  set.clear();
+
+  // reversed order of insertion
+  second = set.insert(AttrRunInfo{3240, 0, false, 62275072, 978944}).first;
+  first  = set.insert(AttrRunInfo{3155, 6, false, 62275072, 17694720}).first;
+
+  SCOPE_ASSERT(set.begin() == first); // but doesn't matter
+}

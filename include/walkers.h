@@ -111,14 +111,56 @@ protected:
   std::ostream& Out;
 };
 
+struct AttrRunInfo {
+  bool operator<(const AttrRunInfo& o) const {
+    if (Inum < o.Inum) {
+      return true;
+    }
+    else if (Inum == o.Inum) {
+      if (AttrID < o.AttrID) {
+        return true;
+      }
+      else if (AttrID == o.AttrID) {
+        if (!Slack && o.Slack) {
+          return true;
+        }
+        else if (Slack == o.Slack) {
+          if (DRBeg < o.DRBeg) {
+            return true;
+          }
+          else if (DRBeg == o.DRBeg) {
+            return Offset < o.Offset;
+          }
+        }
+      }
+    }
+    return false;
+  }
+
+  bool operator==(const AttrRunInfo& o) const {
+    return Inum == o.Inum && AttrID == o.AttrID && Slack == o.Slack && DRBeg == o.DRBeg && Offset == o.Offset;
+  }
+
+  uint64_t Inum;
+  uint32_t AttrID;
+  bool     Slack;
+  uint64_t DRBeg,
+           Offset;
+};
+
+typedef std::set<AttrRunInfo> AttrSet;
+typedef boost::icl::interval_map<uint64_t, AttrSet> FsMap;
+
+struct FsMapInfo {
+  uint32_t BlockSize;
+  uint64_t StartSector,
+           EndSector;
+  FsMap    Runs;
+};
+
 class MetadataWriter: public FileCounter {
 public:
   typedef std::pair<TSK_DADDR_T, TSK_DADDR_T> Extent;
-  //                 addr,     attrID,   slack, drbeg     offset
-  typedef std::tuple<uint64_t, uint32_t, bool,  uint64_t, uint64_t> AttrRunInfo;
-  typedef std::set<AttrRunInfo> AttrSet;
-  typedef boost::icl::interval_map<uint64_t, AttrSet> FsMap;
-  typedef std::tuple<uint32_t, uint64_t, uint64_t, FsMap> FsMapInfo;
   typedef std::map<uint32_t, FsMapInfo> DiskMap; // FS index as key
 
   // FS index -> inode -> [IDs]
