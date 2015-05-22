@@ -12,13 +12,6 @@ Copyright (c) 2010-2015, Stroz Friedberg, LLC
 
 std::ostream& operator<<(std::ostream& out, const Image& img);
 
-struct Extent {
-  std::string FileID,
-              StreamID;
-  std::string PartitionName;
-  TSK_INUM_T  MetaAddr;
-};
-
 class DirInfo {
 public:
   DirInfo(); // makes a dummy root
