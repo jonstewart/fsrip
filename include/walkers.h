@@ -151,13 +151,17 @@ struct FsMapInfo {
   FsMap    Runs;
 };
 
+struct InodeInfo {
+  std::vector<std::string> DirentIDs;
+};
+
 class MetadataWriter: public FileCounter {
 public:
   typedef std::pair<TSK_DADDR_T, TSK_DADDR_T> Extent;
   typedef std::map<uint32_t, FsMapInfo> DiskMap; // FS index as key
 
   // FS index -> inode -> [IDs]
-  typedef std::map<uint32_t, std::map<uint64_t, std::vector<std::string>>> ReverseInodeMapType;
+  typedef std::map<uint32_t, std::map<uint64_t, InodeInfo>> ReverseInodeMapType;
 
   MetadataWriter(std::ostream& out);
 

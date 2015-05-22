@@ -118,7 +118,7 @@ void outputInodeMap(const std::string& inodeMapFile, std::shared_ptr<LbtTskAuto>
              << "\", \"t\": { \"hardlinks\":[";
 
         bool first = true;
-        for (auto fileID: inodeMap.second) {
+        for (auto fileID: inodeMap.second.DirentIDs) {
           if (!first) {
             file << ", ";
           }

@@ -630,7 +630,7 @@ void MetadataWriter::writeFile(std::ostream& out, const TSK_FS_FILE* file) {
     out << ", \"meta\":";
     writeMetaRecord(out, file, file->fs_info);
 
-    ReverseMap[NumVols][file->meta->addr].emplace_back(id);
+    ReverseMap[NumVols][file->meta->addr].DirentIDs.emplace_back(id);
 
     out << "}, \"__link\":\"" << makeInodeID(NumVols, file->meta->addr) << "\"";
   }
