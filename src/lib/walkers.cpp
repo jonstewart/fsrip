@@ -515,8 +515,11 @@ TSK_RETVAL_ENUM MetadataWriter::processFile(TSK_FS_FILE* file, const char* path)
 void MetadataWriter::finishWalk() {
 }
 
-void MetadataWriter::writeMetaRecord(std::ostream& out, const TSK_FS_FILE* file, const TSK_FS_INFO* fs) {
+void MetadataWriter::writeMetaRecord(std::ostream& out, const TSK_FS_FILE* file, const TSK_FS_INFO* fs, InodeInfo& inode) {
   const TSK_FS_META* i = file->meta;
+
+  inode.Deleted = i->flags & TSK_FS_META_FLAG_UNALLOC;
+
   out << "{"
       << j<int64_t>("addr", static_cast<int64_t>(i->addr), true)
       << j("accessed", formatTimestamp(i->atime, i->atime_nano))
@@ -550,7 +553,7 @@ void MetadataWriter::writeMetaRecord(std::ostream& out, const TSK_FS_FILE* file,
         if (lastAttr != 0) {
           out << ", ";
         }
-        writeAttr(out, i->addr, a);
+        writeAttr(out, inode, i->addr, a);
         lastAttr = a;
       }
     }
@@ -565,7 +568,7 @@ void MetadataWriter::writeMetaRecord(std::ostream& out, const TSK_FS_FILE* file,
           if (num > 0) {
             out << ", ";
           }
-          writeAttr(out, i->addr, a);
+          writeAttr(out, inode, i->addr, a);
           ++num;
         }
       }
@@ -627,10 +630,11 @@ void MetadataWriter::writeFile(std::ostream& out, const TSK_FS_FILE* file) {
      (m->flags & TSK_FS_META_FLAG_USED) && // gotta be legit
      (!n || n->flags & TSK_FS_NAME_FLAG_ALLOC || typeMatch(n->type, m->type))) // no sense in outputting meta if file's deleted and name and meta types don't match
   {
-    out << ", \"meta\":";
-    writeMetaRecord(out, file, file->fs_info);
+    InodeInfo& inode = ReverseMap[NumVols][file->meta->addr];
+    inode.DirentIDs.emplace_back(id);
 
-    ReverseMap[NumVols][file->meta->addr].DirentIDs.emplace_back(id);
+    out << ", \"meta\":";
+    writeMetaRecord(out, file, file->fs_info, inode);
 
     out << "}, \"__link\":\"" << makeInodeID(NumVols, file->meta->addr) << "\"";
   }
@@ -641,7 +645,7 @@ void MetadataWriter::writeFile(std::ostream& out, const TSK_FS_FILE* file) {
   out << " } }";
 }
 
-void MetadataWriter::writeAttr(std::ostream& out, TSK_INUM_T addr, const TSK_FS_ATTR* a) {
+void MetadataWriter::writeAttr(std::ostream& out, InodeInfo& inode, TSK_INUM_T addr, const TSK_FS_ATTR* a) {
   out << "{"
       << j("flags", attrFlags(a->flags), true)
       << j("id", a->id)
@@ -654,15 +658,21 @@ void MetadataWriter::writeAttr(std::ostream& out, TSK_INUM_T addr, const TSK_FS_
       << j("nrd_initsize", a->nrd.initsize)
       << j("nrd_skiplen", a->nrd.skiplen);
 
+  AttrInfo& ai = inode.getOrInsertAttr(a->id);
+  ai.Size = a->size;
+
   if (a->flags & TSK_FS_ATTR_RES && a->rd.buf_size && a->rd.buf) {
     out << ", " << j(std::string("rd_buf")) << ":\"";
-    std::ios::fmtflags oldFlags = out.flags();
-    out << std::hex << std::setfill('0');
+
+    std::ostringstream resData;
+    resData << std::hex << std::setfill('0');
     size_t numBytes = std::min(a->rd.buf_size, (size_t)a->size);
     for (size_t i = 0; i < numBytes; ++i) {
-      out << std::setw(2) << (unsigned int)a->rd.buf[i];
+      resData << std::setw(2) << (unsigned int)a->rd.buf[i];
     }
-    out.flags(oldFlags);
+    ai.Resident = true;
+    ai.ResidentData = resData.str();
+    out << ai.ResidentData;
     out << "\"";
   }
 
@@ -731,7 +741,8 @@ void MetadataWriter::writeAttr(std::ostream& out, TSK_INUM_T addr, const TSK_FS_
           << "}";
       first = false;
     }
-    out << "]" << j("slack_size", slackFo);
+    ai.SlackSize = slackFo;
+    out << "]";
   }
   out << "}";
 }

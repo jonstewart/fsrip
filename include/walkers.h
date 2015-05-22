@@ -151,8 +151,54 @@ struct FsMapInfo {
   FsMap    Runs;
 };
 
+struct Run {
+  uint64_t FileOffset,
+           Start,
+           End;
+};
+
+struct AttrInfo {
+
+  AttrInfo(uint32_t id): ID(id), Resident(false), Size(0), SlackSize(0) {}
+
+  uint32_t ID;
+
+  bool        Resident;
+  std::string ResidentData;
+
+  uint64_t Size,
+           SlackSize;
+
+  std::vector<Run> Runs,
+                   SlackRuns;
+
+  void addRun(bool slack, const Run& run) {
+    if (slack) {
+      SlackRuns.push_back(run);
+    }
+    else {
+      Runs.push_back(run);
+    }
+  }
+};
+
 struct InodeInfo {
   std::vector<std::string> DirentIDs;
+
+  bool Deleted;
+
+  std::vector<AttrInfo> Attrs;
+
+  AttrInfo& getOrInsertAttr(uint32_t id) {
+    auto itr = std::find_if(Attrs.begin(), Attrs.end(), [id](const AttrInfo& ai) { return ai.ID == id; });
+    if (itr == Attrs.end()) {
+      Attrs.push_back(AttrInfo(id));
+      return Attrs.back();
+    }
+    else {
+      return *itr;
+    }
+  }
 };
 
 class MetadataWriter: public FileCounter {
@@ -223,8 +269,8 @@ protected:
 
   void writeFile(std::ostream& out, const TSK_FS_FILE* file);
   void writeNameRecord(std::ostream& out, const TSK_FS_NAME* n);
-  void writeMetaRecord(std::ostream& out, const TSK_FS_FILE* file, const TSK_FS_INFO* fs);
-  void writeAttr(std::ostream& out, TSK_INUM_T addr, const TSK_FS_ATTR* attr);
+  void writeMetaRecord(std::ostream& out, const TSK_FS_FILE* file, const TSK_FS_INFO* fs, InodeInfo& inode);
+  void writeAttr(std::ostream& out, InodeInfo& inode, TSK_INUM_T addr, const TSK_FS_ATTR* attr);
 
   void markDataRun(uint64_t beg, uint64_t end, uint64_t offset, TSK_INUM_T addr, uint32_t attrID, bool slack);
 
