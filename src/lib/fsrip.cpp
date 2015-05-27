@@ -71,16 +71,26 @@ void outputDiskMap(const std::string& diskMapFile, std::shared_ptr<LbtTskAuto> w
     std::ofstream file(diskMapFile, std::ios::out | std::ios::trunc);
 
     auto map(walker->diskMap());
+    auto& reverseMap(walker->reverseMap());
     for (auto fsMapInfo: map) {
       auto layout = fsMapInfo.second.Runs;
       for (auto frag: layout) {
+        uint64_t begin = frag.first.lower(),
+                 end   = frag.first.upper();
         file  << "{" << j("id", makeDiskMapID(frag.first.lower()), true)
               << ",\"t\": { \"i\": { "
-              << j("b", frag.first.lower(), true)
-              << j("l", frag.first.upper() - frag.first.lower())
+              << j("b", begin, true)
+              << j("l", end - frag.first.lower())
               << ", \"f\":[";
         bool firstFile = true;
         for (auto f: frag.second) {
+          if (frag.second.size() > 1) {
+            // conflict!
+          }
+          InodeInfo& inode(reverseMap[fsMapInfo.first][f.Inum]);
+          AttrInfo&  attr(inode.getOrInsertAttr(f.AttrID));
+          attr.addRun(f.Slack, Run{f.Offset + (begin - f.DRBeg), begin, end});
+
           if (!firstFile) {
             file << ", ";
           }
@@ -125,6 +135,49 @@ void outputInodeMap(const std::string& inodeMapFile, std::shared_ptr<LbtTskAuto>
           file << "\"" << fileID << "\"";
           first = false;
         }
+        file << "], \"attrData\":[";
+        first = true;
+        for (auto attr: inodeMap.second.Attrs) {
+          if (!first) {
+            file << ", ";
+          }
+          file << "{";
+          file << j("id", attr.ID, true)
+               << j("type", attr.Type)
+               << j("size", attr.Size)
+               << j("slack_size", attr.SlackSize)
+               << j("resident", attr.Resident)
+               << j("resident_data", attr.ResidentData);
+          file << ",\"runs\":[";
+          bool firstRun = true;
+          for (auto run: attr.Runs) {
+            if (!firstRun) {
+              file << ",";
+            }
+            file << "{";
+            file << j("fo", run.FileOffset, true);
+            file << j("start", run.Start);
+            file << j("end", run.End);
+            file << "}";
+            firstRun = false;
+          }
+          file << "],\"slack_runs\":[";
+          firstRun = true;
+          for (auto run: attr.SlackRuns) {
+            if (!firstRun) {
+              file << ",";
+            }
+            file << "{";
+            file << j("fo", run.FileOffset, true);
+            file << j("start", run.Start);
+            file << j("end", run.End);
+            file << "}";
+            firstRun = false;
+          }
+          file << "]";
+          file << "}";
+          first = false;
+        }
         file << "]}}\n";
       }
     }
@@ -160,15 +213,11 @@ int process(std::shared_ptr<LbtTskAuto> walker, const std::vector< std::string >
     if (0 == walker->start()) {
       walker->startUnallocated();
       walker->finishWalk();
-      std::vector<std::future<void>> futs;
       if (vm.count("disk-map-file") && opts.Command == "dumpfs") {
-        futs.emplace_back(std::async(outputDiskMap, opts.DiskMapFile, walker));
+        outputDiskMap(opts.DiskMapFile, walker);
       }
       if (vm.count("inode-map-file") && opts.Command == "dumpfs") {
-        futs.emplace_back(std::async(outputInodeMap, opts.InodeMapFile, walker));
-      }
-      for (auto& fut: futs) {
-        fut.get();
+        outputInodeMap(opts.InodeMapFile, walker);
       }
       return 0;
     }

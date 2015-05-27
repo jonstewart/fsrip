@@ -564,7 +564,7 @@ void MetadataWriter::writeMetaRecord(std::ostream& out, const TSK_FS_FILE* file,
       unsigned int num = 0;
       for (int j = 0; j < numAttrs; ++j) {
         const TSK_FS_ATTR* a = tsk_fs_file_attr_get_idx(const_cast<TSK_FS_FILE*>(file), j);
-        if (a) {
+        if (a && a->flags & TSK_FS_ATTR_INUSE) {
           if (num > 0) {
             out << ", ";
           }
@@ -659,6 +659,8 @@ void MetadataWriter::writeAttr(std::ostream& out, InodeInfo& inode, TSK_INUM_T a
       << j("nrd_skiplen", a->nrd.skiplen);
 
   AttrInfo& ai = inode.getOrInsertAttr(a->id);
+  ai.ID   = a->id;
+  ai.Type = a->type;
   ai.Size = a->size;
 
   if (a->flags & TSK_FS_ATTR_RES && a->rd.buf_size && a->rd.buf) {

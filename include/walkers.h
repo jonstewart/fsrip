@@ -159,9 +159,10 @@ struct Run {
 
 struct AttrInfo {
 
-  AttrInfo(uint32_t id): ID(id), Resident(false), Size(0), SlackSize(0) {}
+  AttrInfo(uint32_t id): ID(id), Type(0), Resident(false), Size(0), SlackSize(0) {}
 
   uint32_t ID;
+  int      Type;
 
   bool        Resident;
   std::string ResidentData;
@@ -227,8 +228,8 @@ public:
 
   virtual void finishWalk();
 
-  const DiskMap& diskMap() const { return AllocatedRuns; }
-  const ReverseInodeMapType& reverseMap() const { return ReverseMap; }
+  DiskMap& diskMap() { return AllocatedRuns; }
+  ReverseInodeMapType& reverseMap() { return ReverseMap; }
 
   uint64_t diskSize() const { return DiskSize; }
   uint32_t sectorSize() const { return SectorSize; }
